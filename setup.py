@@ -6,11 +6,19 @@ from Cython.Distutils import build_ext
 # set defaults
 depends_lib = "x86_64-pc-linux-gnu"
 version = "0.0.1"
+path = "./"
 
 # assess command line flags
 i=0
 while i < len(sys.argv):
     flag = sys.argv[i]
+    if flag == "--path":
+        arg = sys.argv[i+1]
+        assert input(f"path {arg} ok? (y/n) ")=='y', "Aborting setup."
+        path = arg
+        del sys.argv[i+1]
+        del sys.argv[i]
+        continue
     if flag == "--depends_lib":
         arg = sys.argv[i+1]
         assert arg in ("arm-linux-gnueabihf",
@@ -32,21 +40,18 @@ while i < len(sys.argv):
         del sys.argv[i]
         continue
     i += 1
-print(sys.argv)
 
         
 libdoge_extension = [Extension(
     name=               "libdogecoin",
     language=           "c",
-    sources=            ["/home/jmcaninch/libdogecoin/wrappers/python/libdogecoin/libdogecoin.pyx"],
-    include_dirs=       ["/home/jmcaninch/libdogecoin",
-                        "/home/jmcaninch/libdogecoin/include",
-                        "/home/jmcaninch/libdogecoin/include/dogecoin",
-                        "/home/jmcaninch/libdogecoin/secp256k1/include"],
+    sources=            [path+"/wrappers/python/libdogecoin/libdogecoin.pyx"],
+    include_dirs=       [path,
+                        path+"/include",
+                        path+"/include/dogecoin",
+                        path+"/secp256k1/include"],
     libraries =         ["event", "event_core", "pthread", "m"],
-    library_dirs =      ["depends/" + depends_lib + "/lib"],
-    extra_objects=      ["/home/jmcaninch/libdogecoin/.libs/libdogecoin.a"],
-    extra_compile_args= ["--static", "-fPIC"]
+    extra_objects=      [path+"/.libs/libdogecoin.a"]
 )]
 
 setup(
