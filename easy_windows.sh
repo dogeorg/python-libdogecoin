@@ -7,9 +7,8 @@ rm -rf build 2> /dev/null;
 rm -rf wheelhouse 2> /dev/null;
 rm wrappers/python/libdogecoin/libdogecoin.c 2> /dev/null;
 rm wrappers/python/libdogecoin/libdogecoin.o 2> /dev/null;
-rm libdogecoin-$1-cp38-cp38-linux_x86_64.whl ;
 echo "done removing files..." ;
 cd $3 ;
 python3 setup.py --version 0.0.3 sdist bdist_wheel &&
-auditwheel repair --plat manylinux2014_x86_64 dist/libdogecoin-$1-cp38-cp38-linux_x86_64.whl -w ./wheels
+mv dist/libdogecoin-$1-cp39-cp39-macosx_12_0_x86_64.whl wheels/
 )
