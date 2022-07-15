@@ -1,6 +1,6 @@
 # libdogecoin
 
-A simple Python interface to interact with the libdogecoin C library written by the [Dogecoin Foundation](https://foundation.dogecoin.com/). This module contains wrappers for all user-facing address and transaction functions. For more information on usage of these wrappers, please refer to the bindings doc in the [Dogecoin Foundation libdogecoin repo](LINK HERE!).
+A simple Python interface to interact with the libdogecoin C library written by the [Dogecoin Foundation](https://foundation.dogecoin.com/). This module contains wrappers for all user-facing address and transaction functions. For more information on usage of these wrappers, please refer to the bindings doc in the [Dogecoin Foundation libdogecoin repo](https://github.com/dogecoinfoundation/libdogecoin).
 
 ## Installation
 

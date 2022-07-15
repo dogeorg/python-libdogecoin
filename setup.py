@@ -50,7 +50,7 @@ libdoge_extension = [Extension(
                         path+"/include",
                         path+"/include/dogecoin",
                         path+"/secp256k1/include"],
-    libraries =         ["event", "event_core", "pthread", "m"],
+    libraries =         ["m"],
     extra_objects=      [path+"/.libs/libdogecoin.a"]
 )]
 
