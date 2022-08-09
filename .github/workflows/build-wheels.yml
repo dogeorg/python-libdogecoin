@@ -6,58 +6,149 @@ on: [push, pull_request]
 jobs:
   build_wheels:
     name: Build wheels on ${{ matrix.archs }} for ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
+    
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-20.04, windows-2019, macos-11]
+        name:
+            # - armhf-linux
+            # - aarch64-linux
+            # - x86_64-linux-dbg
+            - x86_64-macos
+            - x86_64-win
+            - i686-win
+            # - i686-linux
+        include:
+          # - name: armhf-linux
+          #   host: arm-linux-gnueabihf
+          #   os: ubuntu-22.04
+          # - name: aarch64-linux
+          #   host: aarch64-linux-gnu
+          #   os: ubuntu-22.04
+          # - name: x86_64-linux-dbg
+          #   host: x86_64-pc-linux-gnu
+          #   os: ubuntu-22.04
+          #   arch: amd64
+          - name: x86_64-macos
+            host: x86_64-apple-darwin14
+            os: macos-latest
+            arch: amd64
+          - name: x86_64-win
+            host: x86_64-w64-mingw32
+            os: windows-2019
+            arch: amd64
+            plat-name: win-amd64
+          - name: i686-win
+            host: i686-w64-mingw32
+            os: windows-2019
+            arch: i386
+            plat-name: win32
+          # - name: i686-linux
+          #   host: i686-pc-linux-gnu
+          #   os: ubuntu-22.04
+          #   arch: i386
+
+    runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
-      - uses: actions/setup-python@v2
+      # - name: Set up QEMU
+      #   if: matrix.os == 'Linux'
+      #   uses: docker/setup-qemu-action@v2
+      #   with:
+      #     platforms: all
+      
+      # - name: Set up Docker Buildx
+      #   if: matrix.os == 'Linux'
+      #   uses: docker/setup-buildx-action@v1
+
+      # - name: Build wheels for ${{ matrix.host }}
+      #   # if: matrix.os == 'Linux'
+      #   run: ./dist.sh --host=${{ matrix.host }}
+
+      - name: Setup WSL
+        if: runner.os == 'Windows'
+        uses: Vampire/setup-wsl@v1.3.1
+
+      - uses: actions/setup-python@v4
         name: Install Python
         with:
-          python-version: '3.9'
+          python-version: '3.10'
+      - run: pip install --upgrade cython setuptools build requests pytest
 
-      - name: Build wheels
-        uses: joerick/cibuildwheel@v2.3.1
-        env:
-          CIBW_TEST_COMMAND: "python {package}/test.py"
+      - name: Build wheels for ${{ matrix.host }}
+        env: 
+          host: ${{ matrix.host }}
+        # if: runner.os != 'Windows'
+        run: |
+          python -m fetch
+          python -m build -w
+          ./test.sh
+
+      # - name: Build wheels for ${{ matrix.host }}
+      #   if: runner.os == 'Windows'
+      #   env: 
+      #     host: ${{ matrix.host }}
+      #   run: |
+      #     python -m fetch
+      #     python setup.py sdist bdist_wheel --plat-name=${{ matrix.plat-name }}
+          
+      # auditwheel repair --plat $ML dist/libdogecoin-$TAG-cp*-cp*-linux_${{ matrix.arch }}.whl -w ./wheels
+
+      # - name: Build wheels for ${{ matrix.host }}
+      #   if: runner.os == 'Windows' && matrix.os == 'windows-2019' && matrix.arch == 'amd64'
+      #   uses: pypa/cibuildwheel@v2.8.1
+      #   env:
+      #     CIBW_BEFORE_BUILD: python3 fetch.py --host ${{ matrix.host }}
+      #     # configure cibuildwheel to build native archs ('auto'), and some
+      #     # emulated ones
+      #     CIBW_ARCHS: AMD64
+
+      # - name: Build wheels for ${{ matrix.host }}
+      #   if: runner.os == 'Windows' && matrix.os == 'windows-2019' && matrix.arch == 'i386'
+      #   uses: pypa/cibuildwheel@v2.8.1
+      #   env:
+      #     CIBW_BEFORE_BUILD: python3 fetch.py --host ${{ matrix.host }}
+      #     # configure cibuildwheel to build native archs ('auto'), and some
+      #     # emulated ones
+      #     CIBW_ARCHS: x86
 
       - uses: actions/upload-artifact@v2
         with:
-          path: ./wheelhouse/*.whl
+          path: ./dist/*.whl
 
-  build_sdist:
-    name: Build source distribution
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
+  # build_sdist:
+  #   name: Build source distribution
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v2
 
-      - uses: actions/setup-python@v2
-        name: Install Python
-        with:
-          python-version: '3.9'
+  #     - uses: actions/setup-python@v2
+  #       name: Install Python
+  #       with:
+  #         python-version: '3.10'
+  #     - run: pip install --upgrade pip cython setuptools build
 
-      - name: Build sdist
-        run: python setup.py sdist
+  #     - name: Build sdist
+  #       run: python setup.py sdist
 
-      - uses: actions/upload-artifact@v2
-        with:
-          path: dist/*.tar.gz
+  #     - uses: actions/upload-artifact@v2
+  #       with:
+  #         path: dist/*.tar.gz
 
-  upload_pypi:
-    needs: [build_wheels, build_sdist]
-    runs-on: ubuntu-latest
-    # upload to PyPI on every tag starting with 'v'
-    if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/v')
-    steps:
-      - uses: actions/download-artifact@v2
-        with:
-          name: artifact
-          path: dist
+  # upload_pypi:
+  #   needs: [build_wheels, build_sdist]
+  #   runs-on: ubuntu-latest
+  #   # upload to PyPI on every tag starting with 'v'
+  #   if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/v')
+  #   steps:
+  #     - uses: actions/download-artifact@v2
+  #       with:
+  #         name: artifact
+  #         path: dist
 
-      - uses: pypa/gh-action-pypi-publish@master
-        with:
-          user: __token__
-          password: ${{ secrets.pypi_password }}
+  #     - uses: pypa/gh-action-pypi-publish@master
+  #       with:
+  #         user: __token__
+  #         password: ${{ secrets.pypi_password }}
