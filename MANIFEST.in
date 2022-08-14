@@ -1,0 +1,3 @@
+include lib/libdogecoin.a
+exclude .dockerignore Dockerfile .gitignore *.sh *.exe *.c *.in
+prune bin libs

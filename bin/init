@@ -1,0 +1,85 @@
+#!/bin/bash
+set -e -o pipefail
+
+rm -rf *.c __pycache__ *.egg-info *.zip *.exe ./tmp
+if [ ! -d "wheels" ]; then mkdir -p wheels; fi
+if [ ! -d "tmp" ]; then mkdir -p tmp; fi
+if [ ! -d "bin/$arch" ]; then mkdir -p bin/$arch; fi
+
+# use_sudo=""
+# if [ $(bash -c ./detect_env.sh) == true ]; then 
+#     use_sudo=""
+#     echo true
+# else
+#     use_sudo=sudo
+#     echo false
+# fi
+
+for i in "$@" 
+do
+    case $i in
+        -a=*|--arch=*) arch="${i#*=}";;
+        -h=*|--host=*) host="${i#*=}";;
+        *) error=1;;
+    esac
+done
+
+version=3.10.6
+url_base=https://www.python.org/ftp/python/$version/
+file=python-$version-embed-$arch.zip
+nuget=""
+if [ $arch == "win32" ]; then
+    file=python-3.10.6.exe
+    curl -L -O $url_base$file
+    host=i686-w64-mingw32
+    plat=win32
+    nuget=pythonx86
+elif [ $arch == "amd64" ]; then
+    host=x86_64-w64-mingw32
+    plat=win_amd64
+    nuget=python
+fi
+
+# setup embedded python with missing include and libs directories:
+nug=""
+curl -L -O https://dist.nuget.org/win-x86-commandline/latest/nuget.exe
+echo "a79f342e739fdb3903a92218767e7813e04930dff463621b6d2be2d468b84e05  nuget.exe" | sha256sum -c
+nug=nuget.exe
+echo $nuget
+./$nug install $nuget -ExcludeVersion -OutputDirectory ./tmp/
+cp -r ./tmp/$nuget/tools/* ./bin/$arch/
+
+curl -L -O https://bootstrap.pypa.io/get-pip.py
+echo "5aefe6ade911d997af080b315ebcb7f882212d070465df544e1175ac2be519b4  get-pip.py" | sha256sum -c
+
+_pth=`find . -maxdepth 3 -type f -regex ".*$arch/python.exe"`
+_pth="${_pth%/*}"
+p=$_pth/python.exe
+$p get-pip.py
+rm get-pip.py
+
+set PY_PIP="./bin/$arch\Scripts"
+set PY_LIBS="./bin/$arch\Lib;$arch\Lib\site-packages"
+
+# install wheel dependencies:
+$p -m pip install -r requirements.txt
+
+# fetch and link missing libs in libdogecoin.a
+# $p fetch.py --host=$host
+
+# build and test python wheel
+# $p -m set --host=$host
+$p -m build -s -w
+TARGET_WHEEL=$(find . -maxdepth 2 -type f -regex "./dist/.*libdogecoin-.*$plat.whl")
+$p -m pip install --upgrade wheel pytest
+$p -m wheel unpack "$TARGET_WHEEL"
+tarfile="${TARGET_WHEEL%/*}/libdogecoin-0.1.0.tar.gz"
+tar xvf $tarfile
+# cp -r ./tests ./libdogecoin-0.1.0/
+pushd ./libdogecoin-0.1.0
+    .$p -m pytest
+popd
+cp $TARGET_WHEEL $tarfile ./wheels
+
+rm -rf ./tmp ./build ./dist ./libdogecoin.egg-info libdogecoin.c .pytest_cache *.exe
+# rm -rf ./libdogecoin-0.1.0

@@ -14,9 +14,9 @@ jobs:
             # - armhf-linux
             # - aarch64-linux
             # - x86_64-linux-dbg
-            - x86_64-macos
+            # - x86_64-macos
             - x86_64-win
-            - i686-win
+            # - i686-win
             # - i686-linux
         include:
           # - name: armhf-linux
@@ -29,20 +29,20 @@ jobs:
           #   host: x86_64-pc-linux-gnu
           #   os: ubuntu-22.04
           #   arch: amd64
-          - name: x86_64-macos
-            host: x86_64-apple-darwin14
-            os: macos-latest
-            arch: amd64
+          # - name: x86_64-macos
+          #   host: x86_64-apple-darwin14
+          #   os: macos-latest
+          #   arch: amd64
           - name: x86_64-win
             host: x86_64-w64-mingw32
             os: windows-2019
             arch: amd64
             plat-name: win-amd64
-          - name: i686-win
-            host: i686-w64-mingw32
-            os: windows-2019
-            arch: i386
-            plat-name: win32
+          # - name: i686-win
+          #   host: i686-w64-mingw32
+          #   os: windows-2019
+          #   arch: i386
+          #   plat-name: win32
           # - name: i686-linux
           #   host: i686-pc-linux-gnu
           #   os: ubuntu-22.04
@@ -82,9 +82,12 @@ jobs:
           host: ${{ matrix.host }}
         # if: runner.os != 'Windows'
         run: |
-          python -m fetch
-          python -m build -w
-          ./test.sh
+            python -m dist
+            python -m build -w --config-setting=--plat-name=${{ matrix.plat-name }}
+
+      # python -m fetch
+      # python -m build -w
+      # ./test.sh
 
       # - name: Build wheels for ${{ matrix.host }}
       #   if: runner.os == 'Windows'

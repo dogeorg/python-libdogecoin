@@ -1,6 +1,0 @@
-wheels/
-.github/
-build-log.txt
-Dockerfile
-.gitignore
-.dockerignore

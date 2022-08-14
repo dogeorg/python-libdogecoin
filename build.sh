@@ -27,13 +27,18 @@ check_sig() {
     fi
 }
 
+USE_SUDO="sudo "
+if has_param '--docker' "$@"; then
+    USE_SUDO=""
+fi
+
 check_tools() {
     for cmd in "$@"; do
         if ! command -v "$cmd" > /dev/null 2>&1; then
             echo "ERR: This script requires that '$cmd' is installed and available in your \$PATH"
             echo $@
-            apt-get update
-            apt-get -y install $@
+            $USE_SUDO apt-get update
+            $USE_SUDO apt-get -y install $@
         fi
     done
 }
@@ -54,7 +59,7 @@ case $i in
             "arm-linux-gnueabihf")
                 OS=linux
                 ARCH=armv7l
-                ML=linux_armv7l
+                ML=manylinux_2_17_$ARCH
                 ARCH_PACKAGES+="g++-arm-linux-gnueabihf "
                 ARCH_PACKAGES+="qemu-user-static qemu-user"
                 TARGET_ARCH="armhf"
@@ -62,42 +67,43 @@ case $i in
             "aarch64-linux-gnu")
                 OS=linux
                 ARCH=aarch64
-                ML=manylinux2014_aarch64
+                ML=manylinux_2_17_$ARCH
                 ARCH_PACKAGES+="g++-aarch64-linux-gnu "
                 ARCH_PACKAGES+="qemu-user-static qemu-user"
                 TARGET_ARCH="arm64"
             ;;
             "x86_64-w64-mingw32")
+                OS=windows
                 ARCH=x86_64
-                ML=manylinux2014_x86_64
-                ARCH_PACKAGES+="g++-mingw-w64 "
+                ML=manylinux_2_17_$ARCH
+                ARCH_PACKAGES+="g++-mingw-w64 wine wine64"
                 TARGET_ARCH="amd64"
-                $USE_SUDO dpkg --add-architecture $TARGET_ARCH
+                plat=amd64
             ;;
             "i686-w64-mingw32")
+                OS=windows
                 ARCH=x86
-                ML=manylinux2014_i686
-                ARCH_PACKAGES+="g++-mingw-w64 "
                 TARGET_ARCH="i386"
-                $USE_SUDO dpkg --add-architecture $TARGET_ARCH
+                ML=manylinux_2_17_$TARGET_ARCH
+                ARCH_PACKAGES+="g++-mingw-w64 wine wine64"
+                plat=win32
             ;;
             "x86_64-apple-darwin14")
+                OS=macos
                 ARCH=x86_64
-                ML=manylinux2014_x86_64
+                ML=manylinux_2_17_x86_64
             ;;
             "x86_64-pc-linux-gnu")
+                OS=linux
                 ARCH=x86_64
-                ML="manylinux2014_x86_64"
+                ML=manylinux_2_17_$ARCH
             ;;
             "i686-pc-linux-gnu")
+                OS=linux
                 ARCH=i686
-                ML=manylinux2014_i686
+                ML=manylinux_2_17_$ARCH
                 ARCH_PACKAGES+="g++-multilib "
                 TARGET_ARCH="i386"
-                $USE_SUDO dpkg --add-architecture $TARGET_ARCH
-            ;;
-            "all")
-                ALL_HOST_TRIPLETS=("x86_64-pc-linux-gnu" "i686-pc-linux-gnu" "aarch64-linux-gnu" "arm-linux-gnueabihf" "x86_64-apple-darwin14" "x86_64-w64-mingw32" "i686-w64-mingw32")
             ;;
             *)
                 ERROR=1
@@ -113,6 +119,8 @@ case $i in
     -t=*|--tag=*)
         TAG="${i#*=}"
     ;;
+    --docker)
+    ;;
     *)
         ERROR=1
     ;;
@@ -124,7 +132,7 @@ if [ "$ERROR" ]; then
     exit $ERROR
 fi
 
-check_tools python3 python-is-python3 python3-venv curl tar unzip gpg patchelf 
+check_tools python3 python-is-python3 python3-venv curl tar unzip gpg patchelf $ARCH_PACKAGES
 
 if [ ! "$TAG" ]; then
     TAG=0.1.0
@@ -138,6 +146,7 @@ FILE="libdogecoin-$TAG-"
 EXTENSION=".tar.gz"
 CHECKSUMS="SHA256SUMS.asc"
 URL=https://github.com/dogecoinfoundation/libdogecoin/releases/download/v0.1.0/
+
 if [[ "$ALL_HOST_TRIPLETS" != "" ]]; then
     END=$((${#ALL_HOST_TRIPLETS[@]} - 1))
     curl -L -O $URL$CHECKSUMS
@@ -156,21 +165,7 @@ if [[ "$ALL_HOST_TRIPLETS" != "" ]]; then
         if [ ! -d "include" ]; then
             mkdir -p include
         fi
-        if [[ "$TARGET_HOST_TRIPLET" == *-mingw32 ]]; then
-            EXTENSION=".zip"
-            ARCHIVE="$FILE$TARGET_HOST_TRIPLET$EXTENSION"
-            curl -L -O "$URL$ARCHIVE"
-            SIG_STATUS=$(grep "$ARCHIVE" "$CHECKSUMS" | sha256sum -c | grep OK)
-            if [ "$SIG_STATUS" == "$ARCHIVE: OK" ]; then
-                printf "$green> checksum looks good$reset\n"
-            else
-                printf "$red> checksum for this libdogecoin release is invalid! This is BAD and may mean the release has been tampered with. It is strongly recommended that you report this to the libdogecoin developers.$reset\n"
-                exit 1;
-            fi
-            unzip -j "$FILE$TARGET_HOST_TRIPLET$EXTENSION" "$FILE$TARGET_HOST_TRIPLET/lib/libdogecoin.a" "$FILE$TARGET_HOST_TRIPLET/include/libdogecoin.h" -d $BUILD_PREFIX
-            unzip -j "$FILE$TARGET_HOST_TRIPLET$EXTENSION"  "$FILE$TARGET_HOST_TRIPLET/include/libdogecoin.h" -d include
-            rm $ARCHIVE
-        else
+        if [[ "$TARGET_HOST_TRIPLET" != *-mingw32 ]]; then
             ARCHIVE=$FILE$TARGET_HOST_TRIPLET$EXTENSION
             curl -L -O "$URL$ARCHIVE"
             SIG_STATUS=$(grep "$ARCHIVE" "$CHECKSUMS" | sha256sum -c | grep OK)
@@ -182,8 +177,10 @@ if [[ "$ALL_HOST_TRIPLETS" != "" ]]; then
             fi
             tar xvf $ARCHIVE "$FILE$TARGET_HOST_TRIPLET/lib/libdogecoin.a"
             tar xvf $ARCHIVE "$FILE$TARGET_HOST_TRIPLET/include/libdogecoin.h"
-            mv $FILE$TARGET_HOST_TRIPLET/lib/libdogecoin.a `pwd`/lib/
-            mv $FILE$TARGET_HOST_TRIPLET/include/libdogecoin.h `pwd`/include/
+            mv $FILE$TARGET_HOST_TRIPLET/lib/libdogecoin.a lib/
+            mkdir -p lib/$TARGET_HOST_TRIPLET
+            cp lib/libdogecoin.a lib/$TARGET_HOST_TRIPLET
+            mv $FILE$TARGET_HOST_TRIPLET/include/libdogecoin.h include/
             rm -rf $FILE$TARGET_HOST_TRIPLET*
         fi
 
@@ -191,51 +188,25 @@ if [[ "$ALL_HOST_TRIPLETS" != "" ]]; then
     rm $CHECKSUMS
 fi
 
-DIST_WHEEL=`find . -maxdepth 2 -type f -regex ".*libdogecoin-.*$ARCH.whl"`
-python3 -m pip install --upgrade pip pytest auditwheel cython setuptools wheel build
-python3 -m build -w && auditwheel repair --plat $ML dist/libdogecoin-$TAG-cp*-cp*-linux_$ARCH.whl -w ./wheels
+# if [ "$TARGET_HOST_TRIPLET" != "x86_64-w64-mingw32" ] || [ "$TARGET_HOST_TRIPLET" != "i686-w64-mingw32" ]; then
+#     python -m pip install --upgrade pip pytest auditwheel cython setuptools wheel build
+#     python -m build \
+#     -C--global-option=egg_info \
+#     -C--global-option=--tag-build=0.1.0 -s -w
+#     # if [ "$OS" == "linux" ]; then
+#     #     auditwheel repair --plat $ML $TARGET_WHEEL -w ../wheels
+#     # fi
+# fi
 
-rm -rf .venv .pytest_cache __pycache__ libdogecoin-*.egg-info/ libdogecoin-* dist/ build/ *.whl *.so *.c lib/ include/ *.egg-info/
-
-# echo "usage: ./easy_windows.sh <version_no> <abs_path_to_libdogecoin> <abs_path_to_current>"
-# (
-# cd $2 ;
-# rm -rf dist 2> /dev/null;
-# rm -rf build 2> /dev/null;
-# rm -rf wheelhouse 2> /dev/null;
-# rm wrappers/python/libdogecoin/libdogecoin.c 2> /dev/null;
-# rm wrappers/python/libdogecoin/libdogecoin.o 2> /dev/null;
-# echo "done removing files..." ;
-# cd $3 ;
-# python3 setup.py --version $1 --path $2 sdist bdist_wheel #&&
-# # mv dist/[name on windows].whl wheels/
-# )
-
-
-# echo "usage: ./easy_mac.sh <version_no> <abs_path_to_libdogecoin> <abs_path_to_current>"
-# (
-# cd $2 ;
-# rm -rf dist 2> /dev/null;
-# rm -rf build 2> /dev/null;
-# rm -rf wheelhouse 2> /dev/null;
-# rm wrappers/python/libdogecoin/libdogecoin.c 2> /dev/null;
-# rm wrappers/python/libdogecoin/libdogecoin.o 2> /dev/null;
-# echo done removing files...\n ;
-# cd $3 ;
-# python3 setup.py --version $1 --path $2 sdist bdist_wheel &&
-# mv dist/libdogecoin-$1-cp39-cp39-macosx_12_0_x86_64.whl wheels/
-# )
-# echo "usage: ./easy_linux.sh <version_no> <abs_path_to_libdogecoin> <abs_path_to_current>"
-# (
-# cd $2 ;
-# rm -rf dist 2> /dev/null;
-# rm -rf build 2> /dev/null;
-# rm -rf wheelhouse 2> /dev/null;
-# rm wrappers/python/libdogecoin/libdogecoin.c 2> /dev/null;
-# rm wrappers/python/libdogecoin/libdogecoin.o 2> /dev/null;
-# rm libdogecoin-$1-cp38-cp38-linux_x86_64.whl 2> /dev/null;
-# echo "done removing files..." ;
-# cd $3 ;
-# python3 setup.py --version $1 --path $2 sdist bdist_wheel &&
-# auditwheel repair --plat manylinux2014_x86_64 dist/libdogecoin-$1-cp38-cp38-linux_x86_64.whl -w ./wheels
-# )
+# if [ "$TARGET_HOST_TRIPLET" != "x86_64-w64-mingw32" ] || [ "$TARGET_HOST_TRIPLET" != "i686-w64-mingw32" ]; then
+#     p=python
+#     TARGET_WHEEL=$(find . -maxdepth 2 -type f -regex "./dist/.*libdogecoin-.*.whl")
+#     $p -m pip install --upgrade wheel pytest
+#     $p -m wheel unpack "$TARGET_WHEEL"
+#     cp -r ./tests ./libdogecoin-0.1.0/
+#     pushd ./libdogecoin-0.1.0
+#         $p -m pytest
+#     popd
+#     cp dist/* ./wheels
+#     rm -rf *.so *.pyd .pytest_cache __pycache__ tests/__pycache__ libdogecoin-*.egg-info/ libdogecoin-* dist/ build/ *.whl *.so *.c *.egg-info/ lib/libdogecoin.a
+# fi

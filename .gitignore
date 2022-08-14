@@ -136,3 +136,7 @@ build-log.txt
 /include
 include/
 libdogecoin.c
+
+# windows python stuff
+bin/amd64/*
+bin/win32/*
