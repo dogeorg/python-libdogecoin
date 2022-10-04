@@ -178,8 +178,8 @@ if [[ "$ALL_HOST_TRIPLETS" != "" ]]; then
             tar xvf $ARCHIVE "$FILE$TARGET_HOST_TRIPLET/lib/libdogecoin.a"
             tar xvf $ARCHIVE "$FILE$TARGET_HOST_TRIPLET/include/libdogecoin.h"
             mv $FILE$TARGET_HOST_TRIPLET/lib/libdogecoin.a lib/
-            mkdir -p lib/$TARGET_HOST_TRIPLET
-            cp lib/libdogecoin.a lib/$TARGET_HOST_TRIPLET
+            # mkdir -p lib/$TARGET_HOST_TRIPLET
+            # cp lib/libdogecoin.a lib
             mv $FILE$TARGET_HOST_TRIPLET/include/libdogecoin.h include/
             rm -rf $FILE$TARGET_HOST_TRIPLET*
         fi

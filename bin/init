@@ -1,6 +1,15 @@
 #!/bin/bash
 set -e -o pipefail
 
+for i in "$@" 
+do
+    case $i in
+        -a=*|--arch=*) arch="${i#*=}";;
+        -h=*|--host=*) host="${i#*=}";;
+        *) error=1;;
+    esac
+done
+
 rm -rf *.c __pycache__ *.egg-info *.zip *.exe ./tmp
 if [ ! -d "wheels" ]; then mkdir -p wheels; fi
 if [ ! -d "tmp" ]; then mkdir -p tmp; fi
@@ -14,15 +23,6 @@ if [ ! -d "bin/$arch" ]; then mkdir -p bin/$arch; fi
 #     use_sudo=sudo
 #     echo false
 # fi
-
-for i in "$@" 
-do
-    case $i in
-        -a=*|--arch=*) arch="${i#*=}";;
-        -h=*|--host=*) host="${i#*=}";;
-        *) error=1;;
-    esac
-done
 
 version=3.10.6
 url_base=https://www.python.org/ftp/python/$version/
@@ -65,11 +65,18 @@ set PY_LIBS="./bin/$arch\Lib;$arch\Lib\site-packages"
 $p -m pip install -r requirements.txt
 
 # fetch and link missing libs in libdogecoin.a
-# $p fetch.py --host=$host
+$p fetch.py --host=$host
+$p -m set --host=$host
+rm *.asc
+libs=""
+for f in libs/$arch/*.a; do libs+=$f" "; done
+AR="$host-ar" bash ./combine.sh --target lib/libdogecoin.a --append "$libs"
 
 # build and test python wheel
-# $p -m set --host=$host
-$p -m build -s -w
+$p -m build \
+-C--host=$ALL_HOST_TRIPLETS \
+-C--global-option=egg_info \
+-C--global-option=--tag-build=0.1.0 -w
 TARGET_WHEEL=$(find . -maxdepth 2 -type f -regex "./dist/.*libdogecoin-.*$plat.whl")
 $p -m pip install --upgrade wheel pytest
 $p -m wheel unpack "$TARGET_WHEEL"
@@ -81,5 +88,4 @@ pushd ./libdogecoin-0.1.0
 popd
 cp $TARGET_WHEEL $tarfile ./wheels
 
-rm -rf ./tmp ./build ./dist ./libdogecoin.egg-info libdogecoin.c .pytest_cache *.exe
-# rm -rf ./libdogecoin-0.1.0
+rm -rf ./tmp ./build ./dist ./libdogecoin.egg-info libdogecoin.c .pytest_cache *.exe ./libdogecoin-0.1.0
