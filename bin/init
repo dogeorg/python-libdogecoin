@@ -43,7 +43,7 @@ fi
 # setup embedded python with missing include and libs directories:
 nug=""
 curl -L -O https://dist.nuget.org/win-x86-commandline/latest/nuget.exe
-echo "a79f342e739fdb3903a92218767e7813e04930dff463621b6d2be2d468b84e05  nuget.exe" | sha256sum -c
+echo "38257f945b3662f5c81d646f2cd940365642e2c4941b34c0e5ae3f4281f9bd2d  nuget.exe" | sha256sum -c
 nug=nuget.exe
 echo $nuget
 ./$nug install $nuget -ExcludeVersion -OutputDirectory ./tmp/

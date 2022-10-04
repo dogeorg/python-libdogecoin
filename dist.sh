@@ -11,36 +11,22 @@ config_env() {
     case "$TARGET_HOST_TRIPLET" in
         "arm-linux-gnueabihf")
             OS=linux
-            TARGET_ARCH="armv7l"
+            TARGET_ARCH="arm32v7"
         ;;
         "aarch64-linux-gnu")
             OS=linux
-            TARGET_ARCH="aarch64"
-        ;;
-        "x86_64-w64-mingw32")
-            OS=linux
-            TARGET_ARCH="amd64"
-            IMAGE=ubuntu:22.04
-        ;;
-        "i686-w64-mingw32")
-            OS=linux
-            TARGET_ARCH="amd64"
-            IMAGE=ubuntu:22.04
-        ;;
-        "x86_64-apple-darwin14")
-            OS=darwin
-            TARGET_ARCH="amd64"
+            TARGET_ARCH="arm64v8"
         ;;
         "x86_64-pc-linux-gnu")
             OS=linux
-            TARGET_ARCH="x86_64"
+            TARGET_ARCH="amd64"
         ;;
         "i686-pc-linux-gnu")
             OS=linux
             TARGET_ARCH="i386"
         ;;
         "all")
-            ALL_HOST_TRIPLETS=("x86_64-pc-linux-gnu" "i686-pc-linux-gnu" "aarch64-linux-gnu" "arm-linux-gnueabihf" "x86_64-apple-darwin14")
+            ALL_HOST_TRIPLETS=("x86_64-pc-linux-gnu" "i686-pc-linux-gnu" "aarch64-linux-gnu" "arm-linux-gnueabihf")
         ;;
         *)
             ERROR=1
@@ -70,71 +56,20 @@ if [ "$ERROR" ]; then
 fi
 
 build() {
-    if [ "$TARGET_HOST_TRIPLET" == "x86_64-w64-mingw32" ] || [ "$TARGET_HOST_TRIPLET" == "i686-w64-mingw32" ]; then
-        if [ "$TARGET_HOST_TRIPLET" == "x86_64-w64-mingw32" ]; then
-            arch=amd64    
-            host=i686-w64-mingw32
-            plat=win32
-            nuget=pythonx86
-        elif [ "$TARGET_HOST_TRIPLET" == "i686-w64-mingw32" ]; then
-            arch=win32
-            host=x86_64-w64-mingw32
-            plat=win_amd64
-            nuget=python
-        fi
-        # ./bin/init --arch=$arch
-        _pth=`find . -maxdepth 3 -type f -regex ".*$arch/python.exe"`
-        _pth="${_pth%/*}"
-        p=$_pth/python.exe
-        # install wheel dependencies:
-        $p -m pip install -r requirements.txt
+    # if [ ! -f "$PWD/logs/$TARGET_HOST_TRIPLET-build-log.txt" ]; then
+    #     touch $PWD/logs/$TARGET_HOST_TRIPLET-build-log.txt
+    # fi
 
-        # fetch and link missing libs in libdogecoin.a
-        # $p fetch.py --host=$host
-
-        # build and test python wheel
-        # $p -m set --host=$host
-        $p -m build -s -w
-        TARGET_WHEEL=$(find . -maxdepth 2 -type f -regex "./dist/.*libdogecoin-.*$plat.whl")
-        $p -m pip install --upgrade wheel pytest
-        $p -m wheel unpack "$TARGET_WHEEL"
-        tarfile="${TARGET_WHEEL%/*}/libdogecoin-0.1.0.tar.gz"
-        tar xvf $tarfile
-        # cp -r ./tests ./libdogecoin-0.1.0/
-        pushd ./libdogecoin-0.1.0
-            .$p -m pytest
-        popd
-        cp $TARGET_WHEEL $tarfile ./wheels
-        # p=python
-        # # $p -m set --host=$host
-        # $p -m build -C--plat-name=$arch -s -w
-        # TARGET_WHEEL=$(find . -maxdepth 2 -type f -regex "./dist/.*libdogecoin-.*.whl")
-        # $p -m pip install --upgrade wheel pytest
-        # $p -m wheel unpack "$TARGET_WHEEL"
-        # tarfile="${TARGET_WHEEL%/*}/libdogecoin-0.1.0.tar.gz"
-        # tar xvf $tarfile
-        # # cp -r ./tests ./libdogecoin-0.1.0/
-        # pushd ./libdogecoin-0.1.0
-        #     $p -m pytest
-        # popd
-        # cp $TARGET_WHEEL $tarfile ./wheels
-    else
-        # build and test python wheel
-        p=python
-        $p -m set --host=$host
-        $p -m build -s -w
-        TARGET_WHEEL=$(find . -maxdepth 2 -type f -regex "./dist/.*libdogecoin-.*.whl")
-        $p -m pip install --upgrade wheel pytest
-        $p -m wheel unpack "$TARGET_WHEEL"
-        tarfile="${TARGET_WHEEL%/*}/libdogecoin-0.1.0.tar.gz"
-        tar xvf $tarfile
-        # cp -r ./tests ./libdogecoin-0.1.0/
-        pushd ./libdogecoin-0.1.0
-            $p -m pytest
-        popd
-        cp $TARGET_WHEEL $tarfile ./wheels
-    fi
-    # rm -rf ./tmp ./build ./dist ./libdogecoin.egg-info libdogecoin.c .pytest_cache *.exe *.asc
+    docker buildx build \
+    -t xanimo/python-libdogecoin:$TARGET_ARCH \
+    --build-arg FLAVOR=${FLAVOR:-"bullseye"} \
+    --build-arg ARCH=$TARGET_ARCH \
+    --build-arg TARGET_HOST=$TARGET_HOST_TRIPLET \
+    --target artifact \
+    --output type=local,dest=. .
+    #  \
+    # 2> $PWD/logs/$TARGET_HOST_TRIPLET-build-log.txt \
+    # > >(tail -f $PWD/logs/$TARGET_HOST_TRIPLET-build-log.txt)
 }
 
 if [[ "$ALL_HOST_TRIPLETS" != "" ]]; then

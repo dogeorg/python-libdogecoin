@@ -165,7 +165,7 @@ if [[ "$ALL_HOST_TRIPLETS" != "" ]]; then
         if [ ! -d "include" ]; then
             mkdir -p include
         fi
-        if [[ "$TARGET_HOST_TRIPLET" != *-mingw32 ]]; then
+        if [[ "$TARGET_HOST_TRIPLET" != "*-mingw32" ]]; then
             ARCHIVE=$FILE$TARGET_HOST_TRIPLET$EXTENSION
             curl -L -O "$URL$ARCHIVE"
             SIG_STATUS=$(grep "$ARCHIVE" "$CHECKSUMS" | sha256sum -c | grep OK)
@@ -188,25 +188,27 @@ if [[ "$ALL_HOST_TRIPLETS" != "" ]]; then
     rm $CHECKSUMS
 fi
 
-# if [ "$TARGET_HOST_TRIPLET" != "x86_64-w64-mingw32" ] || [ "$TARGET_HOST_TRIPLET" != "i686-w64-mingw32" ]; then
-#     python -m pip install --upgrade pip pytest auditwheel cython setuptools wheel build
-#     python -m build \
-#     -C--global-option=egg_info \
-#     -C--global-option=--tag-build=0.1.0 -s -w
-#     # if [ "$OS" == "linux" ]; then
-#     #     auditwheel repair --plat $ML $TARGET_WHEEL -w ../wheels
-#     # fi
-# fi
+if [ "$TARGET_HOST_TRIPLET" != "x86_64-w64-mingw32" ] || [ "$TARGET_HOST_TRIPLET" != "i686-w64-mingw32" ]; then
+    python -m pip install --upgrade -r requirements.txt
+    # python -m set --host=$ALL_HOST_TRIPLETS
+    python -m build \
+    -C--host=$ALL_HOST_TRIPLETS \
+    -C--global-option=egg_info \
+    -C--global-option=--tag-build=0.1.0 -s -w
+    # if [ "$OS" == "linux" ]; then
+    #     auditwheel repair --plat $ML $TARGET_WHEEL -w ../wheels
+    # fi
+fi
 
-# if [ "$TARGET_HOST_TRIPLET" != "x86_64-w64-mingw32" ] || [ "$TARGET_HOST_TRIPLET" != "i686-w64-mingw32" ]; then
-#     p=python
-#     TARGET_WHEEL=$(find . -maxdepth 2 -type f -regex "./dist/.*libdogecoin-.*.whl")
-#     $p -m pip install --upgrade wheel pytest
-#     $p -m wheel unpack "$TARGET_WHEEL"
-#     cp -r ./tests ./libdogecoin-0.1.0/
-#     pushd ./libdogecoin-0.1.0
-#         $p -m pytest
-#     popd
-#     cp dist/* ./wheels
-#     rm -rf *.so *.pyd .pytest_cache __pycache__ tests/__pycache__ libdogecoin-*.egg-info/ libdogecoin-* dist/ build/ *.whl *.so *.c *.egg-info/ lib/libdogecoin.a
-# fi
+if [ "$TARGET_HOST_TRIPLET" != "x86_64-w64-mingw32" ] || [ "$TARGET_HOST_TRIPLET" != "i686-w64-mingw32" ]; then
+    p=python
+    TARGET_WHEEL=$(find . -maxdepth 2 -type f -regex "./dist/.*libdogecoin-.*.whl")
+    $p -m pip install --upgrade wheel pytest
+    $p -m wheel unpack "$TARGET_WHEEL"
+    cp -r ./tests ./libdogecoin-0.1.0/
+    pushd ./libdogecoin-0.1.0
+        $p -m pytest
+    popd
+    cp dist/* ./wheels
+    rm -rf *.so *.pyd .pytest_cache __pycache__ tests/__pycache__ libdogecoin-*.egg-info/ libdogecoin-* dist/ build/ *.whl *.so *.c *.egg-info/ lib/libdogecoin.a
+fi
