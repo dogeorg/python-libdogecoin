@@ -8,7 +8,7 @@ ARG TARGET_HOST=${TARGET_HOST:-"x86_64-pc-linux-gnu"}
 RUN mkdir -p work/wheels
 COPY . /work
 WORKDIR /work
-RUN ./build.sh --host=$TARGET_HOST --docker
+RUN ./bin/build --host=$TARGET_HOST --docker
 
 FROM scratch as artifact
 COPY --from=build /work/wheels ./wheels

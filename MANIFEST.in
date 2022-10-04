@@ -1,3 +1,6 @@
-include lib/libdogecoin.a
-exclude .dockerignore Dockerfile .gitignore *.sh *.exe *.c *.in
-prune bin libs
+include fetch.py set.py build combine bin/init bin/dist.sh bin/build bin/combine Dockerfile
+exclude .dockerignore .gitignore *.sh *.exe *.c *.yml
+prune libs
+prune include
+prune lib
+prune .github

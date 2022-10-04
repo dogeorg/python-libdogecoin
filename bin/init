@@ -70,13 +70,13 @@ $p -m set --host=$host
 rm *.asc
 libs=""
 for f in libs/$arch/*.a; do libs+=$f" "; done
-AR="$host-ar" bash ./combine.sh --target lib/libdogecoin.a --append "$libs"
+AR="$host-ar" bash ./bin/combine --target lib/libdogecoin.a --append "$libs"
 
 # build and test python wheel
 $p -m build \
 -C--host=$ALL_HOST_TRIPLETS \
--C--global-option=egg_info \
--C--global-option=--tag-build=0.1.0 -w
+-C--build-option=egg_info \
+-C--build-option=--tag-build=0.1.0 -w -s
 TARGET_WHEEL=$(find . -maxdepth 2 -type f -regex "./dist/.*libdogecoin-.*$plat.whl")
 $p -m pip install --upgrade wheel pytest
 $p -m wheel unpack "$TARGET_WHEEL"
