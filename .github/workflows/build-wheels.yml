@@ -108,7 +108,7 @@ jobs:
           TARGET_WHEEL=$(find . -maxdepth 2 -type f -regex ".*libdogecoin-.*")
           python -m pip install --upgrade wheel pytest
           wheel unpack "$TARGET_WHEEL"
-          cp -r ../tests ./libdogecoin-0.1.0/
+          cp -r ./tests ./libdogecoin-0.1.0/
           pushd ./libdogecoin-0.1.0
               python -m pytest
           popd
