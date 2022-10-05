@@ -1,9 +1,6 @@
 from setuptools import setup, Extension
 from Cython.Build import cythonize
 from Cython.Distutils import build_ext
-
-# set defaults
-version = "0.1.0"
        
 libdogecoin_extension = [Extension(
     name=               "libdogecoin",
@@ -16,7 +13,7 @@ libdogecoin_extension = [Extension(
 
 setup(
     name=                           "libdogecoin",
-    version=                        version,
+    version=                        "0.1.0",
     author=                         "Jackie McAninch",
     author_email=                   "jackie.mcaninch.2019@gmail.com",
     maintainer=                     "bluezr",
