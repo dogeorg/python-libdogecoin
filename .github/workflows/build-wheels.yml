@@ -68,13 +68,15 @@ jobs:
       - name: Build wheels for ${{ matrix.host }}
         if: runner.os == 'Linux'
         run: |
-          docker buildx build \
-          -t xanimo/python-libdogecoin:${{ matrix.arch }} \
-          --build-arg FLAVOR=${FLAVOR:-"bullseye"} \
-          --build-arg ARCH=${{ matrix.arch }} \
-          --build-arg TARGET_HOST=${{ matrix.host }} \
-          --target artifact \
-          --output type=local,dest=. .
+          ./bin/dist --host=${{ matrix.host }}
+
+        # docker buildx build \
+        # -t xanimo/python-libdogecoin:${{ matrix.arch }} \
+        # --build-arg FLAVOR=${FLAVOR:-"bullseye"} \
+        # --build-arg ARCH=${{ matrix.arch }} \
+        # --build-arg TARGET_HOST=${{ matrix.host }} \
+        # --target artifact \
+        # --output type=local,dest=. .
 
       - name: Setup WSL
         if: runner.os == 'Windows'
