@@ -1,3 +1,4 @@
+auditwheel >= 0.29
 build >= 0.8.0
 pip >= 21.3.1
 requests >= 2.28.1

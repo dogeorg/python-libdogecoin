@@ -59,7 +59,7 @@ case $i in
             "arm-linux-gnueabihf")
                 OS=linux
                 ARCH=armv7l
-                ML=manylinux_2_17_$ARCH
+                ML=manylinux2014_$ARCH
                 ARCH_PACKAGES+="g++-arm-linux-gnueabihf "
                 ARCH_PACKAGES+="qemu-user-static qemu-user"
                 TARGET_ARCH="armhf"
@@ -67,7 +67,7 @@ case $i in
             "aarch64-linux-gnu")
                 OS=linux
                 ARCH=aarch64
-                ML=manylinux_2_17_$ARCH
+                ML=manylinux2014_$ARCH
                 ARCH_PACKAGES+="g++-aarch64-linux-gnu "
                 ARCH_PACKAGES+="qemu-user-static qemu-user"
                 TARGET_ARCH="arm64"
@@ -75,7 +75,7 @@ case $i in
             "x86_64-w64-mingw32")
                 OS=windows
                 ARCH=x86_64
-                ML=manylinux_2_17_$ARCH
+                ML=manylinux2014_$ARCH
                 ARCH_PACKAGES+="g++-mingw-w64 wine wine64"
                 TARGET_ARCH="amd64"
                 plat=amd64
@@ -84,24 +84,24 @@ case $i in
                 OS=windows
                 ARCH=x86
                 TARGET_ARCH="i386"
-                ML=manylinux_2_17_$TARGET_ARCH
+                ML=manylinux2014_$TARGET_ARCH
                 ARCH_PACKAGES+="g++-mingw-w64 wine wine64"
                 plat=win32
             ;;
             "x86_64-apple-darwin14")
                 OS=macos
                 ARCH=x86_64
-                ML=manylinux_2_17_x86_64
+                ML=manylinux2014_x86_64
             ;;
             "x86_64-pc-linux-gnu")
                 OS=linux
                 ARCH=x86_64
-                ML=manylinux_2_17_$ARCH
+                ML=manylinux2014_$ARCH
             ;;
             "i686-pc-linux-gnu")
                 OS=linux
                 ARCH=i686
-                ML=manylinux_2_17_$ARCH
+                ML=manylinux2014_$ARCH
                 ARCH_PACKAGES+="g++-multilib "
                 TARGET_ARCH="i386"
             ;;
@@ -192,23 +192,23 @@ if [ "$TARGET_HOST_TRIPLET" != "x86_64-w64-mingw32" ] || [ "$TARGET_HOST_TRIPLET
     python -m pip install --upgrade -r requirements.txt
     # python -m set --host=$ALL_HOST_TRIPLETS
     python -m build \
-    -C--host=$ALL_HOST_TRIPLETS \
-    -C--global-option=egg_info \
-    -C--global-option=--tag-build=0.1.0 -s -w
-    # if [ "$OS" == "linux" ]; then
-    #     auditwheel repair --plat $ML $TARGET_WHEEL -w ../wheels
-    # fi
+    -C--build-option=egg_info \
+    -C--build-option=--tag-build=0.1.0 -s -w
+    TARGET_WHEEL=$(find . -maxdepth 2 -type f -regex "./dist/.*libdogecoin-.*_$ARCH.whl")
+    if [ "$OS" == "linux" ]; then
+        python -m auditwheel repair --plat $ML $TARGET_WHEEL -w ./wheels
+    fi
+    rm -rf ./dist
 fi
 
 if [ "$TARGET_HOST_TRIPLET" != "x86_64-w64-mingw32" ] || [ "$TARGET_HOST_TRIPLET" != "i686-w64-mingw32" ]; then
     p=python
-    TARGET_WHEEL=$(find . -maxdepth 2 -type f -regex "./dist/.*libdogecoin-.*.whl")
+    TARGET_WHEEL=$(find . -maxdepth 2 -type f -regex "./wheels/.*libdogecoin-.*.whl")
     $p -m pip install --upgrade wheel pytest
     $p -m wheel unpack "$TARGET_WHEEL"
     cp -r ./tests ./libdogecoin-0.1.0/
     pushd ./libdogecoin-0.1.0
         $p -m pytest
     popd
-    cp dist/* ./wheels
     rm -rf *.so *.pyd .pytest_cache __pycache__ tests/__pycache__ libdogecoin-*.egg-info/ libdogecoin-* dist/ build/ *.whl *.so *.c *.egg-info/ lib/libdogecoin.a
 fi
