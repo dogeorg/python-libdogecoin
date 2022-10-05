@@ -98,21 +98,19 @@ jobs:
         env: 
           host: ${{ matrix.host }}
         run: |
-            mkdir -p wheels
-            python -m fetch --host=${{ matrix.host }}
-            pushd src
-              python -m build \
-              -C--build-option=egg_info \
-              -C--build-option=--tag-build=0.1.0 -w
-              TARGET_WHEEL=$(find . -maxdepth 2 -type f -regex ".*libdogecoin-.*")
-              python -m pip install --upgrade wheel pytest
-              wheel unpack "$TARGET_WHEEL"
-              cp -r ../tests ./libdogecoin-0.1.0/
-              pushd ./libdogecoin-0.1.0
-                  python -m pytest
-              popd
-            popd
-            cp src/dist/*.whl ./wheels
+          mkdir -p wheels
+          python -m fetch --host=${{ matrix.host }}
+          python -m build \
+          -C--build-option=egg_info \
+          -C--build-option=--tag-build=0.1.0 -w
+          TARGET_WHEEL=$(find . -maxdepth 2 -type f -regex ".*libdogecoin-.*")
+          python -m pip install --upgrade wheel pytest
+          wheel unpack "$TARGET_WHEEL"
+          cp -r ../tests ./libdogecoin-0.1.0/
+          pushd ./libdogecoin-0.1.0
+              python -m pytest
+          popd
+          cp dist/*.whl ./wheels
 
       - uses: actions/upload-artifact@v2
         with:
@@ -133,10 +131,8 @@ jobs:
       - name: Build sdist
         run: |
             mkdir -p wheels
-            pushd src
-              python setup.py sdist
-            popd
-            cp src/dist/*.tar.gz ./wheels
+            python -m build -s
+            cp dist/*.tar.gz ./wheels
 
       - uses: actions/upload-artifact@v2
         with:
