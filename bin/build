@@ -132,7 +132,8 @@ if [ "$ERROR" ]; then
     exit $ERROR
 fi
 
-check_tools python3 python-is-python3 python3-venv curl tar unzip gpg patchelf $ARCH_PACKAGES
+$USE_SUDO apt-get update
+$USE_SUDO apt-get install -y python3.9 python-is-python3=3.9.2-1 python3-venv=3.9.2-3 curl tar unzip gpg patchelf=0.12-1 $ARCH_PACKAGES
 
 if [ ! "$TAG" ]; then
     TAG=0.1.0

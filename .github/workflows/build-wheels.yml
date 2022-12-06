@@ -155,6 +155,6 @@ jobs:
         with:
           user: __token__
           password: ${{ secrets.PYPI_PASSWORD }}
-          repository_url: https://test.pypi.org/legacy/
+          repository_url: https://upload.pypi.org/legacy/
           verbose: true
           print_hash: true
