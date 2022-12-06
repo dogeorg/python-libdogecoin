@@ -13,7 +13,7 @@ libdogecoin_extension = [Extension(
 
 setup(
     name=                           "libdogecoin",
-    version=                        "0.1.0",
+    version=                        "0.1.0.post1",
     author=                         "Jackie McAninch",
     author_email=                   "jackie.mcaninch.2019@gmail.com",
     maintainer=                     "bluezr",

@@ -104,12 +104,12 @@ jobs:
           python -m fetch --host=${{ matrix.host }}
           python -m build \
           -C--build-option=egg_info \
-          -C--build-option=--tag-build=0.1.0 -w
+          -C--build-option=--tag-build=0.1.0.post1 -w
           TARGET_WHEEL=$(find . -maxdepth 2 -type f -regex ".*libdogecoin-.*")
           python -m pip install --upgrade wheel pytest
           wheel unpack "$TARGET_WHEEL"
-          cp -r ./tests ./libdogecoin-0.1.0/
-          pushd ./libdogecoin-0.1.0
+          cp -r ./tests ./libdogecoin-0.1.0.post1/
+          pushd ./libdogecoin-0.1.0.post1
               python -m pytest
           popd
           cp dist/*.whl ./wheels
