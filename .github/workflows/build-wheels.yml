@@ -87,7 +87,10 @@ jobs:
         name: Install Python
         with:
           python-version: '3.10'
-      - run: pip install --upgrade cython setuptools build requests pytest
+
+      - name: Install Python build dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: pip install --upgrade cython setuptools build requests pytest wheel
 
       - name: Build wheels for ${{ matrix.host }}
         if: runner.os == 'Windows'
@@ -97,17 +100,16 @@ jobs:
 
       - name: Build wheels for ${{ matrix.host }}
         if: matrix.host == 'x86_64-apple-darwin14'
-        env: 
+        env:
           host: ${{ matrix.host }}
         run: |
           mkdir -p wheels
-          python -m fetch --host=${{ matrix.host }}
+          python fetch.py --host=${{ matrix.host }}
           python -m build \
           -C--build-option=egg_info \
           -C--build-option=--tag-build=0.1.1 -w
           TARGET_WHEEL=$(find . -maxdepth 2 -type f -regex ".*libdogecoin-.*")
-          python -m pip install --upgrade wheel pytest
-          wheel unpack "$TARGET_WHEEL"
+          python -m wheel unpack "$TARGET_WHEEL"
           cp -r ./tests ./libdogecoin-0.1.1/
           pushd ./libdogecoin-0.1.1
               python -m pytest
