@@ -142,8 +142,15 @@ jobs:
         with:
           path: wheels/*.tar.gz
 
-  upload_pypi:
+  ci_gate:
+    name: CI gate — all targets must pass
     needs: [build_wheels, build_sdist]
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "All CI targets passed."
+
+  upload_pypi:
+    needs: [ci_gate]
     runs-on: ubuntu-latest
     # upload to PyPI on every tag starting with 'v'
     if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/v')
