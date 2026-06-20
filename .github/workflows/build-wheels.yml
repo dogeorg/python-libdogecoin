@@ -80,7 +80,7 @@ jobs:
 
       - name: Setup WSL
         if: runner.os == 'Windows'
-        uses: Vampire/setup-wsl@v1.3.1
+        uses: Vampire/setup-wsl@v7.0.0
 
       - uses: actions/setup-python@v5
         if: runner.os != 'Linux' && runner.os != 'Windows'
