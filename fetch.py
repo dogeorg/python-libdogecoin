@@ -34,6 +34,7 @@ VALID_HOSTS = (
     "aarch64-linux-gnu",
     "x86_64-pc-linux-gnu",
     "x86_64-apple-darwin14",
+    "aarch64-apple-darwin",
     "x86_64-w64-mingw32",
     "i686-w64-mingw32",
     "i686-pc-linux-gnu",
