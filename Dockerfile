@@ -12,5 +12,3 @@ RUN ./bin/build --host=$TARGET_HOST --docker
 
 FROM scratch as artifact
 COPY --from=build /work/wheels ./wheels
-
-FROM release
