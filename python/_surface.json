@@ -1,0 +1,77 @@
+{
+  "functions": [
+    {
+      "name": "dogecoin_ecc_start",
+      "in_idl": true
+    },
+    {
+      "name": "dogecoin_ecc_stop",
+      "in_idl": true
+    },
+    {
+      "name": "generatePrivPubKeypair",
+      "in_idl": true
+    },
+    {
+      "name": "generateHDMasterPubKeypair",
+      "in_idl": true
+    },
+    {
+      "name": "generateDerivedHDPubkey",
+      "in_idl": true
+    },
+    {
+      "name": "verifyPrivPubKeypair",
+      "in_idl": true
+    },
+    {
+      "name": "verifyHDMasterPubKeypair",
+      "in_idl": true
+    },
+    {
+      "name": "verifyP2pkhAddress",
+      "in_idl": true
+    },
+    {
+      "name": "start_transaction",
+      "in_idl": false
+    },
+    {
+      "name": "add_utxo",
+      "in_idl": false
+    },
+    {
+      "name": "add_output",
+      "in_idl": false
+    },
+    {
+      "name": "finalize_transaction",
+      "in_idl": false
+    },
+    {
+      "name": "sign_transaction",
+      "in_idl": false
+    },
+    {
+      "name": "remove_all",
+      "in_idl": false
+    },
+    {
+      "name": "get_raw_transaction",
+      "in_idl": false
+    },
+    {
+      "name": "clear_transaction",
+      "in_idl": false
+    },
+    {
+      "name": "sign_raw_transaction",
+      "in_idl": false
+    },
+    {
+      "name": "store_raw_transaction",
+      "in_idl": false
+    }
+  ],
+  "count": 18
+}

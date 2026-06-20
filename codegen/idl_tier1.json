@@ -1,0 +1,329 @@
+{
+  "$schema": "./tier1.schema.json",
+  "version": "0.1.0",
+  "tier": 1,
+  "description": "Pure stateless string/byte surface of libdogecoin. Single source of truth for python (cffi), go (cgo) and js (emscripten/n-api) bindings. All sizes mirror the macros in libdogecoin.h verbatim; do not edit by hand without re-verifying against the header.",
+  "constants": {
+    "PRIVKEYWIFLEN": 53,
+    "HDKEYLEN": 112,
+    "P2PKHLEN": 35,
+    "PUBKEYHEXLEN": 67,
+    "PUBKEYHASHLEN": 41,
+    "SCRIPTPUBKEYLEN": 51,
+    "KEYPATHMAXLEN": 256,
+    "PRIVKEYHEXLEN": 65,
+    "DOGECOIN_ECKEY_PKEY_LENGTH": 32,
+    "MAX_SEED_SIZE": 64,
+    "MAX_MNEMONIC_SIZE": 1024,
+    "MAX_PASS_SIZE": 256,
+    "MAX_HEX_ENT_SIZE": 65,
+    "ENT_STRING_SIZE": 3,
+    "CHANGE_LEVEL_SIZE": 2,
+    "KEY_PATH_SIZE": 256,
+    "KOINU_STR_SIZE": 21
+  },
+  "comment_param_kinds": "in=read-only scalar/string the caller provides; out=caller-allocated buffer of `size` bytes the callee fills; inout_size=size_t* the caller seeds and the callee may update; nullable_u32=const uint32_t* where NULL has semantic meaning; owned_return=heap char* the caller must release via dogecoin_free.",
+  "functions": [
+    { "name": "dogecoin_ecc_start", "ret": "void", "params": [], "group": "context",
+      "doc": "Initialize the static secp256k1 context. Call once before any key/address/sign function." },
+    { "name": "dogecoin_ecc_stop", "ret": "void", "params": [], "group": "context",
+      "doc": "Tear down the static secp256k1 context." },
+    { "name": "dogecoin_free", "ret": "void", "params": [
+        { "name": "ptr", "kind": "in", "ctype": "void*" } ], "group": "memory",
+      "doc": "Release memory returned by owned_return functions (e.g. sign_message)." },
+
+    { "name": "generatePrivPubKeypair", "ret": "int", "group": "address",
+      "params": [
+        { "name": "wif_privkey", "kind": "out", "ctype": "char*", "size": "PRIVKEYWIFLEN" },
+        { "name": "p2pkh_pubkey", "kind": "out", "ctype": "char*", "size": "P2PKHLEN" },
+        { "name": "is_testnet", "kind": "in", "ctype": "bool" } ],
+      "doc": "Generate a WIF privkey + matching p2pkh address. Returns 1 on success." },
+
+    { "name": "generateHDMasterPubKeypair", "ret": "int", "group": "address",
+      "params": [
+        { "name": "hd_privkey_master", "kind": "out", "ctype": "char*", "size": "HDKEYLEN" },
+        { "name": "p2pkh_pubkey_master", "kind": "out", "ctype": "char*", "size": "P2PKHLEN" },
+        { "name": "is_testnet", "kind": "in", "ctype": "bool" } ],
+      "doc": "Generate an HD master key + matching p2pkh address. Returns 1 on success." },
+
+    { "name": "generateDerivedHDPubkey", "ret": "int", "group": "address",
+      "params": [
+        { "name": "hd_privkey_master", "kind": "in", "ctype": "const char*" },
+        { "name": "p2pkh_pubkey", "kind": "out", "ctype": "char*", "size": "P2PKHLEN" } ],
+      "doc": "Derive a child p2pkh address from an HD master key. Returns 1 on success." },
+
+    { "name": "verifyPrivPubKeypair", "ret": "int", "group": "address",
+      "params": [
+        { "name": "wif_privkey", "kind": "in", "ctype": "char*" },
+        { "name": "p2pkh_pubkey", "kind": "in", "ctype": "char*" },
+        { "name": "is_testnet", "kind": "in", "ctype": "bool" } ],
+      "doc": "Verify a WIF privkey matches a p2pkh address. Returns 1 if matched." },
+
+    { "name": "verifyHDMasterPubKeypair", "ret": "int", "group": "address",
+      "params": [
+        { "name": "hd_privkey_master", "kind": "in", "ctype": "char*" },
+        { "name": "p2pkh_pubkey_master", "kind": "in", "ctype": "char*" },
+        { "name": "is_testnet", "kind": "in", "ctype": "bool" } ],
+      "doc": "Verify an HD master key matches a p2pkh address. Returns 1 if matched." },
+
+    { "name": "verifyP2pkhAddress", "ret": "int", "group": "address",
+      "params": [
+        { "name": "p2pkh_pubkey", "kind": "in", "ctype": "char*" },
+        { "name": "len", "kind": "in", "ctype": "size_t", "auto": "strlen(p2pkh_pubkey)" } ],
+      "doc": "Validate Dogecoin p2pkh address format. Returns 1 if valid." },
+
+    { "name": "getDerivedHDAddress", "ret": "int", "group": "bip32",
+      "params": [
+        { "name": "masterkey", "kind": "in", "ctype": "const char*" },
+        { "name": "account", "kind": "in", "ctype": "uint32_t" },
+        { "name": "ischange", "kind": "in", "ctype": "bool" },
+        { "name": "addressindex", "kind": "in", "ctype": "uint32_t" },
+        { "name": "outaddress", "kind": "out", "ctype": "char*", "size": "P2PKHLEN" },
+        { "name": "outprivkey", "kind": "in", "ctype": "bool" } ],
+      "doc": "Derive an HD address (or WIF privkey if outprivkey) at account/change/index. Returns 1 on success." },
+
+    { "name": "getDerivedHDAddressAsP2PKH", "ret": "int", "group": "bip32",
+      "params": [
+        { "name": "masterkey", "kind": "in", "ctype": "const char*" },
+        { "name": "account", "kind": "in", "ctype": "uint32_t" },
+        { "name": "ischange", "kind": "in", "ctype": "bool" },
+        { "name": "addressindex", "kind": "in", "ctype": "uint32_t" },
+        { "name": "outp2pkh", "kind": "out", "ctype": "char*", "size": "P2PKHLEN" } ],
+      "doc": "Derive an HD p2pkh address at account/change/index. Returns 1 on success." },
+
+    { "name": "getDerivedHDAddressByPath", "ret": "int", "group": "bip32",
+      "params": [
+        { "name": "masterkey", "kind": "in", "ctype": "const char*" },
+        { "name": "derived_path", "kind": "in", "ctype": "const char*" },
+        { "name": "outaddress", "kind": "out", "ctype": "char*", "size": "P2PKHLEN" } ],
+      "doc": "Derive an HD p2pkh address by custom BIP32 path string. Returns 1 on success." },
+
+    { "name": "getDerivedHDKeyByPath", "ret": "int", "group": "bip32",
+      "params": [
+        { "name": "masterkey", "kind": "in", "ctype": "const char*" },
+        { "name": "derived_path", "kind": "in", "ctype": "const char*" },
+        { "name": "outaddress", "kind": "out", "ctype": "char*", "size": "HDKEYLEN" },
+        { "name": "outprivkey", "kind": "in", "ctype": "bool" } ],
+      "doc": "Derive an HD extended key by custom path. Returns 1 on success." },
+
+    { "name": "getAddressFromPubkey", "ret": "int", "group": "address",
+      "params": [
+        { "name": "pubkey_hex", "kind": "in", "ctype": "const char*" },
+        { "name": "is_testnet", "kind": "in", "ctype": "bool" },
+        { "name": "p2pkh_address", "kind": "out", "ctype": "char*", "size": "P2PKHLEN" } ],
+      "doc": "Derive a p2pkh address from a hex pubkey. Returns 1 on success." },
+
+    { "name": "getPubkeyFromPrivkey", "ret": "int", "group": "address",
+      "params": [
+        { "name": "privkey_wif", "kind": "in", "ctype": "const char*" },
+        { "name": "is_testnet", "kind": "in", "ctype": "bool" },
+        { "name": "pubkey_hex", "kind": "out", "ctype": "char*", "size": "PUBKEYHEXLEN" },
+        { "name": "sizeout", "kind": "inout_size", "ctype": "size_t*", "seed": "PUBKEYHEXLEN" } ],
+      "doc": "Derive a hex pubkey from a WIF privkey. Returns 1 on success." },
+
+    { "name": "genPrivkey", "ret": "int", "group": "address",
+      "params": [
+        { "name": "is_testnet", "kind": "in", "ctype": "bool" },
+        { "name": "privkey_wif", "kind": "out", "ctype": "char*", "size": "PRIVKEYWIFLEN" },
+        { "name": "strsize_wif", "kind": "in", "ctype": "size_t", "auto": "PRIVKEYWIFLEN" },
+        { "name": "privkey_hex", "kind": "out", "ctype": "char*", "size": "PRIVKEYHEXLEN" } ],
+      "doc": "Generate a new private key in both WIF and hex form. Returns 1 on success." },
+
+    { "name": "getAddrFromPubkeyHash", "ret": "int", "group": "address",
+      "params": [
+        { "name": "pubkey_hash", "kind": "in", "ctype": "const char*" },
+        { "name": "is_testnet", "kind": "in", "ctype": "bool" },
+        { "name": "p2pkh_address", "kind": "out", "ctype": "char*", "size": "P2PKHLEN" } ],
+      "doc": "Derive a p2pkh address from a pubkey hash hex. Returns 1 on success." },
+
+    { "name": "isTestnetFromB58Prefix", "ret": "int", "group": "address",
+      "params": [ { "name": "address", "kind": "in", "ctype": "const char*" } ],
+      "doc": "Return 1 if address has a testnet base58 prefix." },
+
+    { "name": "isMainnetFromB58Prefix", "ret": "int", "group": "address",
+      "params": [ { "name": "address", "kind": "in", "ctype": "const char*" } ],
+      "doc": "Return 1 if address has a mainnet base58 prefix." },
+
+    { "name": "dogecoin_p2pkh_address_to_pubkey_hash", "ret": "int", "group": "address",
+      "params": [
+        { "name": "p2pkh", "kind": "in", "ctype": "char*" },
+        { "name": "scripthash", "kind": "out", "ctype": "char*", "size": "PUBKEYHASHLEN" } ],
+      "doc": "Convert a p2pkh address to its pubkey hash hex. Returns 1 on success." },
+
+    { "name": "getWifEncodedPrivKey", "ret": "void", "group": "key",
+      "params": [
+        { "name": "privkey", "kind": "in", "ctype": "const char*" },
+        { "name": "is_testnet", "kind": "in", "ctype": "bool" },
+        { "name": "privkey_wif", "kind": "out", "ctype": "char*", "size": "PRIVKEYWIFLEN" },
+        { "name": "strsize_wif", "kind": "inout_size", "ctype": "size_t*", "seed": "PRIVKEYWIFLEN" } ],
+      "doc": "WIF-encode 32 raw privkey bytes. Void; success implied by populated buffer." },
+
+    { "name": "getDecodedPrivKeyWif", "ret": "int", "group": "key",
+      "params": [
+        { "name": "privkey_wif", "kind": "in", "ctype": "const char*" },
+        { "name": "is_testnet", "kind": "in", "ctype": "bool" },
+        { "name": "privkey_hex", "kind": "out", "ctype": "char*", "size": "DOGECOIN_ECKEY_PKEY_LENGTH" } ],
+      "doc": "Decode a WIF privkey to raw 32 bytes. Returns 1 on success." },
+
+    { "name": "getHDRootKeyFromSeed", "ret": "int", "group": "bip32",
+      "params": [
+        { "name": "seed", "kind": "in", "ctype": "const uint8_t*" },
+        { "name": "seed_len", "kind": "in", "ctype": "int" },
+        { "name": "is_testnet", "kind": "in", "ctype": "bool" },
+        { "name": "masterkey", "kind": "out", "ctype": "char*", "size": "HDKEYLEN" } ],
+      "doc": "Build an HD master key from a BIP32 seed. Returns 1 on success." },
+
+    { "name": "getHDPubKey", "ret": "int", "group": "bip32",
+      "params": [
+        { "name": "hdkey", "kind": "in", "ctype": "const char*" },
+        { "name": "is_testnet", "kind": "in", "ctype": "bool" },
+        { "name": "hdpubkey", "kind": "out", "ctype": "char*", "size": "HDKEYLEN" } ],
+      "doc": "Derive the extended public key from an extended private key. Returns 1 on success." },
+
+    { "name": "deriveExtKeyFromHDKey", "ret": "int", "group": "bip32",
+      "params": [
+        { "name": "extkey", "kind": "in", "ctype": "const char*" },
+        { "name": "keypath", "kind": "in", "ctype": "const char*" },
+        { "name": "is_testnet", "kind": "in", "ctype": "bool" },
+        { "name": "key", "kind": "out", "ctype": "char*", "size": "HDKEYLEN" } ],
+      "doc": "Derive an extended private key along keypath. Returns 1 on success." },
+
+    { "name": "deriveExtPubKeyFromHDKey", "ret": "int", "group": "bip32",
+      "params": [
+        { "name": "extpubkey", "kind": "in", "ctype": "const char*" },
+        { "name": "keypath", "kind": "in", "ctype": "const char*" },
+        { "name": "is_testnet", "kind": "in", "ctype": "bool" },
+        { "name": "pubkey", "kind": "out", "ctype": "char*", "size": "HDKEYLEN" } ],
+      "doc": "Derive an extended public key along keypath (public derivation). Returns 1 on success." },
+
+    { "name": "genHDMaster", "ret": "int", "group": "bip32",
+      "params": [
+        { "name": "is_testnet", "kind": "in", "ctype": "bool" },
+        { "name": "masterkey", "kind": "out", "ctype": "char*", "size": "HDKEYLEN" },
+        { "name": "strsize", "kind": "in", "ctype": "size_t", "auto": "HDKEYLEN" } ],
+      "doc": "Generate a random HD master key. Returns 1 on success." },
+
+    { "name": "deriveHDExtFromMaster", "ret": "int", "group": "bip32",
+      "params": [
+        { "name": "is_testnet", "kind": "in", "ctype": "bool" },
+        { "name": "masterkey", "kind": "in", "ctype": "const char*" },
+        { "name": "keypath", "kind": "in", "ctype": "const char*" },
+        { "name": "extkeyout", "kind": "out", "ctype": "char*", "size": "HDKEYLEN" },
+        { "name": "extkeyout_size", "kind": "in", "ctype": "size_t", "auto": "HDKEYLEN" } ],
+      "doc": "Derive an extended key from master along keypath. Returns 1 on success." },
+
+    { "name": "deriveBIP44ExtendedKey", "ret": "int", "group": "bip44",
+      "params": [
+        { "name": "hd_privkey_master", "kind": "in", "ctype": "const char*" },
+        { "name": "account", "kind": "nullable_u32", "ctype": "const uint32_t*" },
+        { "name": "change_level", "kind": "in", "ctype": "const char*" },
+        { "name": "address_index", "kind": "nullable_u32", "ctype": "const uint32_t*" },
+        { "name": "path", "kind": "in", "ctype": "const char*", "nullable": true },
+        { "name": "extkeyout", "kind": "out", "ctype": "char*", "size": "HDKEYLEN" },
+        { "name": "keypath", "kind": "out", "ctype": "char*", "size": "KEY_PATH_SIZE" } ],
+      "doc": "Derive a BIP44 extended PRIVATE key. NULL account/address_index yield the partial extended key. Returns 1 on success." },
+
+    { "name": "deriveBIP44ExtendedPublicKey", "ret": "int", "group": "bip44",
+      "params": [
+        { "name": "hd_privkey_master", "kind": "in", "ctype": "const char*" },
+        { "name": "account", "kind": "nullable_u32", "ctype": "const uint32_t*" },
+        { "name": "change_level", "kind": "in", "ctype": "const char*" },
+        { "name": "address_index", "kind": "nullable_u32", "ctype": "const uint32_t*" },
+        { "name": "path", "kind": "in", "ctype": "const char*", "nullable": true },
+        { "name": "extkeyout", "kind": "out", "ctype": "char*", "size": "HDKEYLEN" },
+        { "name": "keypath", "kind": "out", "ctype": "char*", "size": "KEY_PATH_SIZE" } ],
+      "doc": "Derive a BIP44 extended PUBLIC key. NULL account/address_index yield the partial extended key. Returns 1 on success." },
+
+    { "name": "generateEnglishMnemonic", "ret": "int", "group": "bip39",
+      "params": [
+        { "name": "entropy", "kind": "in", "ctype": "const char*" },
+        { "name": "size", "kind": "in", "ctype": "const char*" },
+        { "name": "mnemonic", "kind": "out", "ctype": "char*", "size": "MAX_MNEMONIC_SIZE" } ],
+      "doc": "Generate an English mnemonic from hex entropy and size class (e.g. \"256\"). Returns 0 on success." },
+
+    { "name": "generateRandomEnglishMnemonic", "ret": "int", "group": "bip39",
+      "params": [
+        { "name": "size", "kind": "in", "ctype": "const char*" },
+        { "name": "mnemonic", "kind": "out", "ctype": "char*", "size": "MAX_MNEMONIC_SIZE" } ],
+      "doc": "Generate a random English mnemonic of size class \"128\"/\"256\". Returns 0 on success." },
+
+    { "name": "dogecoin_seed_from_mnemonic", "ret": "int", "group": "bip39",
+      "params": [
+        { "name": "mnemonic", "kind": "in", "ctype": "const char*" },
+        { "name": "pass", "kind": "in", "ctype": "const char*", "nullable": true },
+        { "name": "seed", "kind": "out", "ctype": "uint8_t*", "size": "MAX_SEED_SIZE", "binary": true } ],
+      "doc": "Derive a 64-byte BIP39 seed from mnemonic + optional passphrase. Returns 0 on success." },
+
+    { "name": "dogecoin_verify_mnemonic", "ret": "int", "group": "bip39",
+      "params": [
+        { "name": "mnemonic", "kind": "in", "ctype": "const char*" },
+        { "name": "language", "kind": "in", "ctype": "const char*", "nullable": true },
+        { "name": "space", "kind": "in", "ctype": "const char*", "nullable": true },
+        { "name": "filename", "kind": "in", "ctype": "const char*", "nullable": true } ],
+      "doc": "Verify a mnemonic against a wordlist. Returns 0 if valid." },
+
+    { "name": "getDerivedHDAddressFromMnemonic", "ret": "int", "group": "bip39",
+      "params": [
+        { "name": "account", "kind": "in", "ctype": "uint32_t" },
+        { "name": "index", "kind": "in", "ctype": "uint32_t" },
+        { "name": "change_level", "kind": "in", "ctype": "const char*" },
+        { "name": "mnemonic", "kind": "in", "ctype": "const char*" },
+        { "name": "pass", "kind": "in", "ctype": "const char*", "nullable": true },
+        { "name": "p2pkh_pubkey", "kind": "out", "ctype": "char*", "size": "P2PKHLEN" },
+        { "name": "is_testnet", "kind": "in", "ctype": "bool" } ],
+      "doc": "Derive a p2pkh address directly from a mnemonic at account/change/index. Returns 0 on success." },
+
+    { "name": "generateHDMasterPubKeypairFromMnemonic", "ret": "int", "group": "bip39",
+      "params": [
+        { "name": "hd_privkey_master", "kind": "out", "ctype": "char*", "size": "HDKEYLEN" },
+        { "name": "p2pkh_pubkey_master", "kind": "out", "ctype": "char*", "size": "P2PKHLEN" },
+        { "name": "mnemonic", "kind": "in", "ctype": "const char*" },
+        { "name": "pass", "kind": "in", "ctype": "const char*", "nullable": true },
+        { "name": "is_testnet", "kind": "in", "ctype": "bool" } ],
+      "doc": "Build HD master key + address from a mnemonic. Returns 0 on success." },
+
+    { "name": "verifyHDMasterPubKeypairFromMnemonic", "ret": "int", "group": "bip39",
+      "params": [
+        { "name": "hd_privkey_master", "kind": "in", "ctype": "const char*" },
+        { "name": "p2pkh_pubkey_master", "kind": "in", "ctype": "const char*" },
+        { "name": "mnemonic", "kind": "in", "ctype": "const char*" },
+        { "name": "pass", "kind": "in", "ctype": "const char*", "nullable": true },
+        { "name": "is_testnet", "kind": "in", "ctype": "bool" } ],
+      "doc": "Verify HD master key + address match a mnemonic. Returns 0 if matched." },
+
+    { "name": "sign_message", "ret": "owned_char", "group": "message",
+      "params": [
+        { "name": "privkey", "kind": "in", "ctype": "char*" },
+        { "name": "msg", "kind": "in", "ctype": "char*" } ],
+      "doc": "Sign an arbitrary message with a WIF privkey; returns a base64 signature the caller must dogecoin_free." },
+
+    { "name": "verify_message", "ret": "int", "group": "message",
+      "params": [
+        { "name": "sig", "kind": "in", "ctype": "char*" },
+        { "name": "msg", "kind": "in", "ctype": "char*" },
+        { "name": "address", "kind": "in", "ctype": "char*" } ],
+      "doc": "Verify a signed message against an address. Returns 1 if valid." },
+
+    { "name": "koinu_to_coins_str", "ret": "int", "group": "koinu",
+      "params": [
+        { "name": "koinu", "kind": "in", "ctype": "uint64_t" },
+        { "name": "str", "kind": "out", "ctype": "char*", "size": "KOINU_STR_SIZE" } ],
+      "doc": "Format a koinu integer as a decimal coin string. Returns 1 on success." },
+
+    { "name": "coins_to_koinu_str", "ret": "uint64_t", "group": "koinu",
+      "params": [ { "name": "coins", "kind": "in", "ctype": "char*" } ],
+      "doc": "Parse a decimal coin string into koinu. Returns 0 on parse failure." },
+
+    { "name": "get_p2sh_multisig_address", "ret": "int", "group": "multisig",
+      "params": [
+        { "name": "pubkeys_hex", "kind": "in", "ctype": "const char**", "array_of": "string" },
+        { "name": "n", "kind": "in", "ctype": "int" },
+        { "name": "m", "kind": "in", "ctype": "int" },
+        { "name": "is_testnet", "kind": "in", "ctype": "int" },
+        { "name": "p2sh_addr_out", "kind": "out", "ctype": "char*", "size": "P2PKHLEN" },
+        { "name": "p2sh_addr_cap", "kind": "in", "ctype": "size_t", "auto": "P2PKHLEN" },
+        { "name": "redeem_script_hex_out", "kind": "out", "ctype": "char*", "size_expr": "(n*68+6)*2+1" },
+        { "name": "redeem_script_hex_cap", "kind": "in", "ctype": "size_t", "auto": "size_expr" } ],
+      "doc": "Build an M-of-N P2SH multisig address + redeem script from n compressed pubkey hexes. Returns 1 on success." }
+  ]
+}

@@ -12,7 +12,7 @@ Libdogecoin is now ready to be imported within your python script!
 
 ## API
 
-All functions are prefixed with the letter "w" in order to differentiate between the Python wrapper functions and the redeclarations of the original C functions as required by Cython.
+All functions are prefixed with the letter "w" to differentiate the Python wrapper functions from the underlying C functions exposed via cffi.
 
 ---
 ### w_context_start()
@@ -23,33 +23,36 @@ Start the secp256k1 context necessary for key pair generation. Must be started b
 Stop the current instance of the secp256k1 context. It is advised to wait until the session is completely over before stopping the context.
 
 ---
-### w_generate_priv_pub_key_pair(chain_code=0)
+### w_generate_priv_pub_key_pair(chain_code=0, as_bytes=False)
 Generate a valid private key paired with the corresponding p2pkh address.
 
 **Parameters:**
 - chain_code -- 0 for mainnet pair, 1 for testnet pair
+- as_bytes -- if True, return raw bytes instead of strings
 
 **Returns:**
-- privkey -- the generated private key of the pair as byte string
-- p2pkh_pubkey -- the generated public key of the pair as byte string
+- privkey -- the generated private key of the pair
+- p2pkh_pubkey -- the generated public key of the pair
 
 ---
-### w_generate_hd_master_pub_key_pair(chain_code=0)
+### w_generate_hd_master_pub_key_pair(chain_code=0, as_bytes=False)
 Generate a master private and public key pair for use in hierarchical deterministic wallets. Public key can be used for child key derivation using w_generate_derived_hd_pub_key().
 
 **Parameters:**
 - chain_code -- 0 for mainnet pair, 1 for testnet pair
+- as_bytes -- if True, return raw bytes instead of strings
 
 **Returns:**
-- master_privkey -- the generated HD master private key of the pair as a byte string
-- master_p2pkh_pubkey -- the generated HD master public key of the pair as a byte string
+- master_privkey -- the generated HD master private key of the pair
+- master_p2pkh_pubkey -- the generated HD master public key of the pair
 
 ---
-### w_generate_derived_hd_pub_key(wif_privkey_master)
-Given a HD master public key, derive a child key from it.
+### w_generate_derived_hd_pub_key(wif_privkey_master, as_bytes=False)
+Given a HD master private key, derive a child public key from it.
 
 **Parameters:**
 - wif_privkey_master -- HD master private key as wif-encoded string
+- as_bytes -- if True, return raw bytes instead of a string
 
 **Returns:**
 - child_p2pkh_pubkey -- the resulting child public key derived from the provided HD master private key
@@ -151,39 +154,45 @@ Discard a working transaction.
 - tx_index -- the index of the working transaction
 
 ---
-### w_sign_raw_transaction(tx_index, incoming_raw_tx, script_hex, sig_hash_type, amount, privkey)
+### w_sign_raw_transaction(tx_index, incoming_raw_tx, script_hex, sig_hash_type, privkey)
 Sign a finalized raw transaction using the specified private key.
 
 **Parameters:**
-- tx_index -- the index of the working transaction to sign
-- incoming_raw_tx -- the serialized string of the transaction to sign
-- script_hex -- the hex of the script to be signed
-- sig_hash_type -- the type of signature hash to be used
-- amount -- the amount of dogecoin in the transaction being signed
-- privkey -- the private key to sign with
+- tx_index -- the input index to sign (0-based)
+- incoming_raw_tx -- the serialized hex string of the transaction to sign
+- script_hex -- the scriptPubKey hex of the input being signed
+- sig_hash_type -- the type of signature hash to be used (typically 1)
+- privkey -- the wif-encoded private key to sign with
 
 **Returns:**
-- res -- the hex string representation of the signed transaction if successfully signed, 0 otherwise.
+- res -- the hex string of the (partially) signed transaction, 0 on failure
 
 ---
-### w_sign_transaction(tx_index, amounts, script_pubkey, privkey)
-Sign all the inputs of a working transaction using the specified private key and public key script.
+### w_sign_transaction(tx_index, script_pubkey, privkey)
+Sign all inputs of a working transaction using the specified private key and public key script.
 
 **Parameters:**
 - tx_index -- the index of the working transaction to sign
-- amounts -- an array of the input amounts in the specified transaction
-- script_pubkey -- the pubkey script associated with the private key
-- privkey -- the private key used to sign the specified transaction
+- script_pubkey -- the scriptPubKey hex associated with the inputs
+- privkey -- the wif-encoded private key to sign with
 
 **Returns:**
-- res -- the hex string representation of the signed transaction if successfully signed, 0 otherwise.
+- res -- 1 if all inputs were signed successfully, 0 otherwise
 
 ---
 ### w_store_raw_transaction(incoming_raw_tx)
 Stores a raw transaction at the next available index in the hash table.
 
 **Parameters:**
-- incoming_raw_tx -- the serialized string of the transaction to store.
+- incoming_raw_tx -- the serialized hex string of the transaction to store
 
 **Returns:**
-- res -- 1 if the transaction was stored successfully, 0 otherwise.
+- res -- the index of the stored transaction, or 0 if the transaction exceeds 100 KB
+
+---
+### w_remove_all()
+Clear all working transactions from the session hash table.
+
+---
+### available()
+Return a list of the libdogecoin C function names present in the build this wheel was compiled against. Useful for checking which API surface is available at runtime.
