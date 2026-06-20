@@ -94,6 +94,7 @@ jobs:
 
       - name: Build wheels for ${{ matrix.host }}
         if: runner.os == 'Windows'
+        shell: wsl-bash {0}
         run: |
             mkdir -p ./wheels
             bash ./bin/init --arch=${{ matrix.plat-name }}
