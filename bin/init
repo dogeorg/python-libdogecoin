@@ -31,7 +31,7 @@ apt-get install -y -qq --no-install-recommends \
     $MINGW_PKGS \
     curl unzip
 
-pip3 install -q --upgrade cffi setuptools wheel requests
+pip3 install -q --upgrade --break-system-packages cffi setuptools wheel requests
 
 mkdir -p lib include wheels
 
