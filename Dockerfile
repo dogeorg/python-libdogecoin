@@ -1,8 +1,7 @@
 # syntax=docker/dockerfile:1
 ARG FLAVOR=${FLAVOR:-"bullseye"}
-ARG ARCH=${ARCH:-"amd64"}
 
-FROM $ARCH/python:$FLAVOR AS build
+FROM python:3.10-$FLAVOR AS build
 ARG TARGET_HOST=${TARGET_HOST:-"x86_64-pc-linux-gnu"}
 
 COPY . /work
@@ -15,7 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     patchelf \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip install --upgrade pip cffi setuptools wheel build requests auditwheel pytest
+RUN pip install --upgrade pip cffi setuptools wheel build requests "auditwheel==5.1.2" pytest
 
 RUN python fetch.py --host=${TARGET_HOST}
 
