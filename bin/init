@@ -64,7 +64,6 @@ $p -m pip install -r requirements.txt
 
 # fetch and link missing libs in libdogecoin.a
 $p fetch.py --host=$host
-$p -m set --host=$host
 rm *.asc
 libs=""
 for f in libs/$arch/*.a; do libs+=$f" "; done
