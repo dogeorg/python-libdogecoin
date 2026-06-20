@@ -29,6 +29,7 @@ apt-get install -y -qq --no-install-recommends \
     autoconf automake libtool build-essential \
     python3 python3-pip \
     $MINGW_PKGS \
+    mingw-w64-tools \
     curl unzip
 
 pip3 install -q --break-system-packages cffi setuptools requests
@@ -40,13 +41,26 @@ python3 fetch.py --host=$MINGW_HOST
 
 # Get Windows Python headers from NuGet (.nupkg is a zip)
 curl -sL "https://www.nuget.org/api/v2/package/$NUGET_PKG/$PYVER" -o python-win.nupkg
-unzip -q python-win.nupkg "tools/include/*" "tools/libs/*" -d python-win
+unzip -q python-win.nupkg "tools/include/*" -d python-win
 PYINC="$(pwd)/python-win/tools/include"
-PYLIBDIR="$(pwd)/python-win/tools/libs"
+PYLIBDIR="$(pwd)/python-win/libs"
+mkdir -p "$PYLIBDIR"
 
-# Generate MinGW-compatible import library from CPython's exported def file
-curl -sL "https://raw.githubusercontent.com/python/cpython/v${PYVER}/PC/python3.def" -o python3.def
-${MINGW_HOST}-dlltool -D python${PYVER_SHORT}.dll -d python3.def -l "${PYLIBDIR}/libpython${PYVER_SHORT}.a"
+# Generate MinGW import library from the actual python310.dll (embeddable zip).
+# python3.def (stable ABI) is missing many symbols CFFI uses; gendef reads all
+# real exports from the DLL so the import library is complete.
+if [ "$arch" = "win32" ]; then
+    EMBED_ZIP="python-${PYVER}-embed-win32.zip"
+else
+    EMBED_ZIP="python-${PYVER}-embed-amd64.zip"
+fi
+curl -sL "https://www.python.org/ftp/python/${PYVER}/${EMBED_ZIP}" -o python-embed.zip
+unzip -q python-embed.zip python${PYVER_SHORT}.dll
+gendef python${PYVER_SHORT}.dll
+${MINGW_HOST}-dlltool -D python${PYVER_SHORT}.dll \
+    -d python${PYVER_SHORT}.def \
+    -l "${PYLIBDIR}/libpython${PYVER_SHORT}.a"
+rm python${PYVER_SHORT}.dll python${PYVER_SHORT}.def python-embed.zip
 
 # Emit the CFFI C source (WSL Python generates it; the C itself is version-agnostic)
 python3 - <<'PYEOF'
@@ -125,4 +139,4 @@ with zipfile.ZipFile(f"wheels/{wheel_name}", "w", zipfile.ZIP_DEFLATED) as zf:
 print(f"Created wheels/{wheel_name}")
 PYEOF
 
-rm -rf python-win python-win.nupkg python3.def _libdogecoin_cffi.c _libdogecoin_cffi.pyd
+rm -rf python-win python-win.nupkg _libdogecoin_cffi.c _libdogecoin_cffi.pyd
