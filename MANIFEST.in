@@ -1,5 +1,4 @@
-include fetch.py set.py build combine bin/init bin/dist.sh bin/build bin/combine Dockerfile
-exclude .dockerignore .gitignore *.sh *.exe *.c *.yml
+include fetch.py bin/init bin/dist bin/build bin/combine Dockerfile
 prune libs
 prune include
 prune lib
