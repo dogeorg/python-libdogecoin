@@ -1,88 +1,128 @@
 #!/bin/bash
+# Cross-compile a Windows Python wheel using MinGW inside WSL.
 set -e -o pipefail
 
-for i in "$@" 
-do
+PYVER=3.10.11
+PYVER_SHORT=310
+
+for i in "$@"; do
     case $i in
         -a=*|--arch=*) arch="${i#*=}";;
-        -h=*|--host=*) host="${i#*=}";;
-        *) error=1;;
+        *) ;;
     esac
 done
 
-rm -rf *.c __pycache__ *.egg-info *.zip *.exe ./tmp
-if [ ! -d "wheels" ]; then mkdir -p wheels; fi
-if [ ! -d "tmp" ]; then mkdir -p tmp; fi
-if [ ! -d "bin/$arch" ]; then mkdir -p bin/$arch; fi
-
-# use_sudo=""
-# if [ $(bash -c ./detect_env.sh) == true ]; then 
-#     use_sudo=""
-#     echo true
-# else
-#     use_sudo=sudo
-#     echo false
-# fi
-
-version=3.10.6
-url_base=https://www.python.org/ftp/python/$version/
-file=python-$version-embed-$arch.zip
-nuget=""
-if [ $arch == "win32" ]; then
-    file=python-3.10.6.exe
-    curl -L -O $url_base$file
-    host=i686-w64-mingw32
-    plat=win32
-    nuget=pythonx86
-elif [ $arch == "amd64" ]; then
-    host=x86_64-w64-mingw32
-    plat=win_amd64
-    nuget=python
+if [ "$arch" = "win32" ]; then
+    MINGW_HOST=i686-w64-mingw32
+    WIN_PLAT=win32
+    NUGET_PKG=pythonx86
+    MINGW_PKGS="gcc-mingw-w64-i686 g++-mingw-w64-i686 binutils-mingw-w64-i686"
+else
+    MINGW_HOST=x86_64-w64-mingw32
+    WIN_PLAT=win_amd64
+    NUGET_PKG=python
+    MINGW_PKGS="gcc-mingw-w64-x86-64 g++-mingw-w64-x86-64 binutils-mingw-w64-x86-64"
 fi
 
-# setup embedded python with missing include and libs directories:
-nug=""
-curl -L -O https://dist.nuget.org/win-x86-commandline/latest/nuget.exe
-nug=nuget.exe
-chmod +x $nug
-./$nug install $nuget -ExcludeVersion -OutputDirectory ./tmp/
-cp -r ./tmp/$nuget/tools/* ./bin/$arch/
+apt-get update -qq
+apt-get install -y -qq --no-install-recommends \
+    autoconf automake libtool build-essential \
+    python3 python3-pip \
+    $MINGW_PKGS \
+    curl unzip
 
-curl -L -O https://bootstrap.pypa.io/get-pip.py
+pip3 install -q --upgrade cffi setuptools wheel requests
 
-_pth=`find . -maxdepth 3 -type f -regex ".*$arch/python.exe"`
-_pth="${_pth%/*}"
-p=$_pth/python.exe
-$p get-pip.py
-rm get-pip.py
+mkdir -p lib include wheels
 
-set PY_PIP="./bin/$arch\Scripts"
-set PY_LIBS="./bin/$arch\Lib;$arch\Lib\site-packages"
+# Build libdogecoin for Windows via MinGW (WSL Python can run autogen.sh)
+python3 fetch.py --host=$MINGW_HOST
 
-# install wheel dependencies:
-$p -m pip install -r requirements.txt
+# Get Windows Python headers from NuGet (.nupkg is a zip)
+curl -sL "https://www.nuget.org/api/v2/package/$NUGET_PKG/$PYVER" -o python-win.nupkg
+unzip -q python-win.nupkg "tools/include/*" "tools/libs/*" -d python-win
+PYINC="$(pwd)/python-win/tools/include"
+PYLIBDIR="$(pwd)/python-win/tools/libs"
 
-# fetch and link missing libs in libdogecoin.a
-$p fetch.py --host=$host
-rm *.asc
-libs=""
-for f in libs/$arch/*.a; do libs+=$f" "; done
-AR="$host-ar" bash ./bin/combine --target lib/libdogecoin.a --append "$libs"
+# Generate MinGW-compatible import library from CPython's exported def file
+curl -sL "https://raw.githubusercontent.com/python/cpython/v${PYVER}/PC/python3.def" -o python3.def
+${MINGW_HOST}-dlltool -D python${PYVER_SHORT}.dll -d python3.def -l "${PYLIBDIR}/libpython${PYVER_SHORT}.a"
 
-# build and test python wheel
-$p -m build \
--C--host=$ALL_HOST_TRIPLETS \
--C--build-option=egg_info \
--C--build-option=--tag-build=0.1.1 -w -s
-TARGET_WHEEL=$(find . -maxdepth 2 -type f -regex "./dist/.*libdogecoin-.*$plat.whl")
-$p -m pip install --upgrade wheel pytest
-$p -m wheel unpack "$TARGET_WHEEL"
-tarfile="${TARGET_WHEEL%/*}/libdogecoin-0.1.1.tar.gz"
-tar xvf $tarfile
-# cp -r ./tests ./libdogecoin-0.1.1/
-pushd ./libdogecoin-0.1.1
-    .$p -m pytest
-popd
-cp $TARGET_WHEEL $tarfile ./wheels
+# Emit the CFFI C source (WSL Python generates it; the C itself is version-agnostic)
+python3 - <<'PYEOF'
+import sys
+sys.path.insert(0, 'python')
+from _build import ffibuilder
+ffibuilder.emit_c_code('_libdogecoin_cffi.c')
+PYEOF
 
-rm -rf ./tmp ./build ./dist ./libdogecoin.egg-info libdogecoin.c .pytest_cache *.exe ./libdogecoin-0.1.1
+# Compile the extension as a Windows PE DLL using MinGW
+${MINGW_HOST}-gcc -O2 -shared \
+    -I"${PYINC}" \
+    -Iinclude \
+    -o _libdogecoin_cffi.pyd \
+    _libdogecoin_cffi.c \
+    lib/libdogecoin.a \
+    -L"${PYLIBDIR}" -lpython${PYVER_SHORT} \
+    -lws2_32 -lgdi32 -lcrypt32
+
+# Package as a wheel (zip with correct layout and RECORD hashes)
+PY_ABI="cp${PYVER_SHORT}"
+WHEEL_TAG="${PY_ABI}-${PY_ABI}-${WIN_PLAT}"
+
+python3 - <<PYEOF
+import zipfile, hashlib, base64, pathlib, re
+
+root = pathlib.Path(".")
+src = (root / "setup.py").read_text()
+m = re.search(r'version\s*=\s*[\'"]([^\'"]+)[\'"]', src)
+version = m.group(1) if m else "0.1.1"
+
+wheel_tag = "${WHEEL_TAG}"
+wheel_name = f"libdogecoin-{version}-{wheel_tag}.whl"
+dist_info = f"libdogecoin-{version}.dist-info"
+
+def entry(data: bytes) -> str:
+    h = base64.urlsafe_b64encode(hashlib.sha256(data).digest()).rstrip(b"=").decode()
+    return f"sha256={h},{len(data)}"
+
+pkg_files = {
+    "libdogecoin/__init__.py":          (root / "python" / "libdogecoin" / "__init__.py").read_bytes(),
+    "libdogecoin/_cdef.h":              (root / "python" / "_cdef.h").read_bytes(),
+    "libdogecoin/_surface.json":        (root / "python" / "_surface.json").read_bytes(),
+    "libdogecoin/_libdogecoin_cffi.pyd": (root / "_libdogecoin_cffi.pyd").read_bytes(),
+}
+
+wheel_meta = (
+    "Wheel-Version: 1.0\n"
+    "Generator: bin/init\n"
+    "Root-Is-Purelib: false\n"
+    f"Tag: {wheel_tag}\n"
+)
+metadata = (
+    "Metadata-Version: 2.1\n"
+    f"Name: libdogecoin\n"
+    f"Version: {version}\n"
+    "Summary: Python interface for the libdogecoin C library\n"
+    "License: MIT\n"
+    "Requires-Dist: cffi>=1.16\n"
+)
+
+records = []
+with zipfile.ZipFile(f"wheels/{wheel_name}", "w", zipfile.ZIP_DEFLATED) as zf:
+    for arcname, data in pkg_files.items():
+        zf.writestr(arcname, data)
+        records.append(f"{arcname},{entry(data)}")
+
+    for fname, content in [(f"{dist_info}/WHEEL", wheel_meta), (f"{dist_info}/METADATA", metadata)]:
+        data = content.encode()
+        zf.writestr(fname, content)
+        records.append(f"{fname},{entry(data)}")
+
+    record_str = "\n".join(records) + f"\n{dist_info}/RECORD,,\n"
+    zf.writestr(f"{dist_info}/RECORD", record_str)
+
+print(f"Created wheels/{wheel_name}")
+PYEOF
+
+rm -rf python-win python-win.nupkg python3.def _libdogecoin_cffi.c _libdogecoin_cffi.pyd
