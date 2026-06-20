@@ -37,7 +37,7 @@ jobs:
             arch: i386
           - name: x86_64-macos
             host: x86_64-apple-darwin14
-            os: macos-latest
+            os: macos-13
             arch: amd64
           - name: x86_64-win
             host: x86_64-w64-mingw32
@@ -100,21 +100,18 @@ jobs:
 
       - name: Build wheels for ${{ matrix.host }}
         if: matrix.host == 'x86_64-apple-darwin14'
-        env:
-          host: ${{ matrix.host }}
         run: |
+          brew install autoconf automake libtool
           mkdir -p wheels
           python fetch.py --host=${{ matrix.host }}
-          python -m build \
-          -C--build-option=egg_info \
-          -C--build-option=--tag-build=0.1.1 -w
-          TARGET_WHEEL=$(find . -maxdepth 2 -type f -regex ".*libdogecoin-.*")
+          python -m build -w
+          TARGET_WHEEL=$(find ./dist -name "*.whl")
           python -m wheel unpack "$TARGET_WHEEL"
           cp -r ./tests ./libdogecoin-0.1.1/
           pushd ./libdogecoin-0.1.1
               python -m pytest
           popd
-          cp dist/*.whl ./wheels
+          cp ./dist/*.whl ./wheels
 
       - uses: actions/upload-artifact@v4
         with:
