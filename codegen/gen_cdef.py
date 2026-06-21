@@ -39,6 +39,9 @@ TYPEDEF_LOWERING = {
     "bool": "int",
 }
 
+# Functions that use opaque struct types not declared in the cdef; skip them.
+SKIP_FUNCTIONS = {"add_eckey", "remove_eckey", "new_eckey", "find_eckey"}
+
 # size-macro-bearing array params like `char wif[PRIVKEYWIFLEN]` -> `char* wif`.
 ARRAY_PARAM = re.compile(r'^\s*(const\s+)?([A-Za-z_]\w*)\s+(\w+)\s*\[[^\]]*\]\s*$')
 SIMPLE_PARAM = re.compile(r'^\s*(const\s+)?([A-Za-z_][\w\s\*]*?)\s*(\**)\s*(\w+)\s*$')
@@ -124,6 +127,8 @@ def main():
     lines = ["/* AUTO-GENERATED from the fetched libdogecoin header. */"]
     bound = []
     for ret, name, params in protos:
+        if name in SKIP_FUNCTIONS:
+            continue
         lowered = [lower_param(p) for p in params]
         sig = f"{lower_ret(ret)} {name}({', '.join(lowered) or 'void'});"
         lines.append(sig)

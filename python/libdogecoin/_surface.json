@@ -33,6 +33,30 @@
       "in_idl": true
     },
     {
+      "name": "getDerivedHDAddress",
+      "in_idl": true
+    },
+    {
+      "name": "getDerivedHDAddressByPath",
+      "in_idl": true
+    },
+    {
+      "name": "generateEnglishMnemonic",
+      "in_idl": true
+    },
+    {
+      "name": "generateRandomEnglishMnemonic",
+      "in_idl": true
+    },
+    {
+      "name": "dogecoin_seed_from_mnemonic",
+      "in_idl": true
+    },
+    {
+      "name": "getDerivedHDAddressFromMnemonic",
+      "in_idl": true
+    },
+    {
       "name": "start_transaction",
       "in_idl": false
     },
@@ -65,13 +89,53 @@
       "in_idl": false
     },
     {
+      "name": "qrgen_p2pkh_to_qrbits",
+      "in_idl": false
+    },
+    {
+      "name": "qrgen_p2pkh_to_qr_string",
+      "in_idl": false
+    },
+    {
+      "name": "qrgen_p2pkh_consoleprint_to_qr",
+      "in_idl": false
+    },
+    {
+      "name": "qrgen_string_to_qr_pngfile",
+      "in_idl": false
+    },
+    {
+      "name": "qrgen_string_to_qr_jpgfile",
+      "in_idl": false
+    },
+    {
       "name": "sign_raw_transaction",
       "in_idl": false
     },
     {
       "name": "store_raw_transaction",
       "in_idl": false
+    },
+    {
+      "name": "dogecoin_char_vla",
+      "in_idl": false
+    },
+    {
+      "name": "dogecoin_free",
+      "in_idl": true
+    },
+    {
+      "name": "start_key",
+      "in_idl": false
+    },
+    {
+      "name": "sign_message",
+      "in_idl": true
+    },
+    {
+      "name": "verify_message",
+      "in_idl": true
     }
   ],
-  "count": 18
+  "count": 34
 }

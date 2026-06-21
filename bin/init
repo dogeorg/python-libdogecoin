@@ -90,7 +90,7 @@ import zipfile, hashlib, base64, pathlib, re
 root = pathlib.Path(".")
 src = (root / "setup.py").read_text()
 m = re.search(r'version\s*=\s*[\'"]([^\'"]+)[\'"]', src)
-version = m.group(1) if m else "0.1.1"
+version = m.group(1) if m else "0.1.2"
 
 wheel_tag = "${WHEEL_TAG}"
 wheel_name = f"libdogecoin-{version}-{wheel_tag}.whl"

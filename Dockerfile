@@ -31,8 +31,9 @@ RUN python -m build -w && \
 
 RUN TARGET_WHEEL=$(find ./wheels -name "*.whl") && \
     python -m wheel unpack "${TARGET_WHEEL}" && \
-    cp -r ./tests ./libdogecoin-0.1.1/ && \
-    cd ./libdogecoin-0.1.1 && \
+    UNPACK_DIR=$(find . -maxdepth 1 -type d -name "libdogecoin-*" | head -1) && \
+    cp -r ./tests "${UNPACK_DIR}/" && \
+    cd "${UNPACK_DIR}" && \
     python -m pytest
 
 FROM scratch AS artifact

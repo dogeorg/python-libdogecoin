@@ -106,12 +106,15 @@ def fetch_binary(tag: str, host: str):
         with tarfile.open(fileobj=BytesIO(archive_bytes), mode="r:gz") as tf:
             tf.extractall(".")
 
-    for src, dst in [
-        (f"{prefix}/lib/libdogecoin.a",   "lib/libdogecoin.a"),
-        (f"{prefix}/include/libdogecoin.h", "include/libdogecoin.h"),
-    ]:
-        if os.path.isfile(src):
-            os.replace(src, dst)
+    if os.path.isfile(f"{prefix}/lib/libdogecoin.a"):
+        os.replace(f"{prefix}/lib/libdogecoin.a", "lib/libdogecoin.a")
+    inc_src = f"{prefix}/include"
+    if os.path.isdir(inc_src):
+        for fname in os.listdir(inc_src):
+            if fname.endswith(".h"):
+                os.replace(os.path.join(inc_src, fname), os.path.join("include", fname))
+    elif os.path.isfile(f"{prefix}/include/libdogecoin.h"):
+        os.replace(f"{prefix}/include/libdogecoin.h", "include/libdogecoin.h")
 
 
 # ---------------------------------------------------------------------------
@@ -178,8 +181,12 @@ def build_from_source(tag: str, host: str, expected_sha256: str | None):
     os.makedirs("lib", exist_ok=True)
     os.makedirs("include", exist_ok=True)
     shutil.copy2(lib_src, "lib/libdogecoin.a")
-    shutil.copy2(hdr_src, "include/libdogecoin.h")
-    ok(f"Installed lib/libdogecoin.a and include/libdogecoin.h")
+    # Copy all companion headers from the same directory as libdogecoin.h
+    hdr_dir = os.path.dirname(hdr_src)
+    for fname in os.listdir(hdr_dir):
+        if fname.endswith(".h"):
+            shutil.copy2(os.path.join(hdr_dir, fname), os.path.join("include", fname))
+    ok(f"Installed lib/libdogecoin.a and include/*.h")
 
 
 def _native_triplet() -> str:
@@ -238,7 +245,7 @@ def main():
         import re
         setup_src = open(os.path.join(os.path.dirname(__file__), "setup.py")).read()
         m = re.search(r'version\s*=\s*["\']([^"\']+)["\']', setup_src)
-        tag = m.group(1) if m else "0.1.1"
+        tag = m.group(1) if m else "0.1.2"
 
     print(f"Fetching libdogecoin v{tag} for {host}")
 

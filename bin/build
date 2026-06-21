@@ -194,7 +194,7 @@ if [ "$TARGET_HOST_TRIPLET" != "x86_64-w64-mingw32" ] || [ "$TARGET_HOST_TRIPLET
     # python -m set --host=$ALL_HOST_TRIPLETS
     python -m build \
     -C--build-option=egg_info \
-    -C--build-option=--tag-build=0.1.1 -s -w
+    -C--build-option=--tag-build=0.1.2 -s -w
     TARGET_WHEEL=$(find . -maxdepth 2 -type f -regex "./dist/.*libdogecoin-.*_$ARCH.whl")
     if [ "$OS" == "linux" ]; then
         python -m auditwheel repair --plat $ML $TARGET_WHEEL -w ./wheels
@@ -207,7 +207,7 @@ if [ "$TARGET_HOST_TRIPLET" != "x86_64-w64-mingw32" ] || [ "$TARGET_HOST_TRIPLET
     TARGET_WHEEL=$(find . -maxdepth 2 -type f -regex "./wheels/.*libdogecoin-.*.whl")
     $p -m pip install --upgrade wheel pytest
     $p -m wheel unpack "$TARGET_WHEEL"
-    cp -r ./tests ./libdogecoin-0.1.1/
+    cp -r ./tests ./libdogecoin-0.1.2/
     pushd ./libdogecoin-0.1.1
         $p -m pytest
     popd

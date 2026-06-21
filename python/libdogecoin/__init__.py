@@ -18,6 +18,12 @@ _MASTER_KEY_LEN = 128
 _P2PKH_LEN = 35
 _TX_HEX_MAX = 1024 * 100
 
+# BIP39 buffer sizes (from libdogecoin.h defines)
+_MNEMONIC_LEN = 1024   # MAX_MNEMONIC_SIZE
+_PASS_LEN = 256        # MAX_PASS_SIZE
+_SEED_LEN = 64         # MAX_SEED_SIZE (bytes)
+_HEX_ENT_LEN = 65     # MAX_HEX_ENT_SIZE
+
 
 def _has(name: str) -> bool:
     return hasattr(lib, name)
@@ -188,6 +194,158 @@ def w_store_raw_transaction(incoming_raw_tx) -> int:
 def w_remove_all() -> None:
     """Clear all internal working transactions."""
     _require("remove_all")()
+
+
+# === HD ADDRESSES (0.1.2+) ==================================================
+
+def w_get_derived_hd_address(masterkey, account: int, ischange: int,
+                              addressindex: int, outprivkey: bool = False):
+    """Derive a HD address (or privkey) by account/change/index path."""
+    out = _buf(_MASTER_KEY_LEN)
+    rc = _require("getDerivedHDAddress")(
+        _b(masterkey), account, ischange, addressindex, out, int(outprivkey))
+    if not rc:
+        return None
+    return _s(out)
+
+
+def w_get_derived_hd_address_by_path(masterkey, derived_path,
+                                      outprivkey: bool = False):
+    """Derive a HD address (or privkey) by an explicit BIP32 derivation path."""
+    out = _buf(_MASTER_KEY_LEN)
+    rc = _require("getDerivedHDAddressByPath")(
+        _b(masterkey), _b(derived_path), out, int(outprivkey))
+    if not rc:
+        return None
+    return _s(out)
+
+
+# === BIP39 MNEMONIC (0.1.2+) ================================================
+
+def w_generate_english_mnemonic(entropy, size):
+    """Generate an English mnemonic from hex entropy.
+
+    entropy: hex string (e.g. 32 hex chars for 128-bit entropy)
+    size: entropy bit length as string — "128", "160", "192", "224", or "256"
+    Returns: mnemonic phrase string, or None on failure.
+    """
+    mnemonic = _buf(_MNEMONIC_LEN)
+    rc = _require("generateEnglishMnemonic")(_b(entropy), _b(size), mnemonic)
+    if rc < 0:
+        return None
+    return _s(mnemonic)
+
+
+def w_generate_random_english_mnemonic(size):
+    """Generate a random English mnemonic phrase.
+
+    size: entropy bit length as string — "128", "160", "192", "224", or "256"
+    Returns: mnemonic phrase string, or None on failure.
+    """
+    mnemonic = _buf(_MNEMONIC_LEN)
+    rc = _require("generateRandomEnglishMnemonic")(_b(size), mnemonic)
+    if rc < 0:
+        return None
+    return _s(mnemonic)
+
+
+def w_dogecoin_seed_from_mnemonic(mnemonic, passphrase: str = "") -> bytes | None:
+    """Derive a 64-byte BIP32 seed from a mnemonic phrase and optional passphrase.
+
+    Returns: raw bytes (64 bytes), or None on failure.
+    """
+    seed = ffi.new("uint8_t[64]")
+    rc = _require("dogecoin_seed_from_mnemonic")(_b(mnemonic), _b(passphrase), seed)
+    if rc < 0:
+        return None
+    return bytes(ffi.buffer(seed, _SEED_LEN))
+
+
+def w_get_derived_hd_address_from_mnemonic(account: int, index: int,
+                                            change_level,
+                                            mnemonic, passphrase: str = "",
+                                            chain_code: int = 0):
+    """Derive a p2pkh address directly from a BIP39 mnemonic.
+
+    account: BIP44 account number
+    index: address index
+    change_level: "0" for external chain, "1" for internal/change
+    mnemonic: BIP39 mnemonic phrase
+    passphrase: optional BIP39 passphrase
+    chain_code: 0 for mainnet, 1 for testnet
+    Returns: p2pkh address string, or None on failure.
+    """
+    addr = _buf(_P2PKH_LEN + 4)
+    rc = _require("getDerivedHDAddressFromMnemonic")(
+        account, index, _b(change_level), _b(mnemonic), _b(passphrase),
+        addr, chain_code)
+    if rc < 0:
+        return None
+    return _s(addr)
+
+
+# === QR CODE (0.1.2+) =======================================================
+
+def w_qrgen_p2pkh_to_qr_string(p2pkh) -> str | None:
+    """Return a text-art QR code string for a p2pkh address (with line breaks)."""
+    out = _buf(32768)
+    rc = _require("qrgen_p2pkh_to_qr_string")(_b(p2pkh), out)
+    if not rc:
+        return None
+    return _s(out)
+
+
+def w_qrgen_p2pkh_consoleprint_to_qr(p2pkh) -> None:
+    """Print a QR code for a p2pkh address directly to stdout."""
+    _require("qrgen_p2pkh_consoleprint_to_qr")(_b(p2pkh))
+
+
+def w_qrgen_string_to_qr_pngfile(filename, data, size_multiplier: int = 4) -> int:
+    """Write a QR code as a PNG file.
+
+    filename: output filename (including .png extension)
+    data: string to encode in the QR code
+    size_multiplier: pixel size multiplier (default 4)
+    Returns: 1 on success, 0 on failure.
+    """
+    return int(_require("qrgen_string_to_qr_pngfile")(
+        _b(filename), _b(data), size_multiplier))
+
+
+def w_qrgen_string_to_qr_jpgfile(filename, data, size_multiplier: int = 4) -> int:
+    """Write a QR code as a JPEG file.
+
+    filename: output filename (including .jpg extension)
+    data: string to encode in the QR code
+    size_multiplier: pixel size multiplier (default 4)
+    Returns: 1 on success, 0 on failure.
+    """
+    return int(_require("qrgen_string_to_qr_jpgfile")(
+        _b(filename), _b(data), size_multiplier))
+
+
+# === MESSAGE SIGNING (0.1.2+) ===============================================
+
+def w_sign_message(privkey, message) -> str | None:
+    """Sign an arbitrary message with a WIF private key.
+
+    Returns: base64-encoded signature string, or None on failure.
+    """
+    res = _require("sign_message")(_b(privkey), _b(message))
+    if res == ffi.NULL:
+        return None
+    return ffi.string(res).decode("utf-8")
+
+
+def w_verify_message(signature, message, address) -> bool:
+    """Verify a signed message against a p2pkh address.
+
+    signature: base64-encoded signature (from w_sign_message)
+    message: the original message string
+    address: the p2pkh address corresponding to the signing key
+    Returns: True if the signature is valid, False otherwise.
+    """
+    return bool(_require("verify_message")(_b(signature), _b(message), _b(address)))
 
 
 # === SURFACE INTROSPECTION ===================================================
