@@ -18,12 +18,10 @@ Usage:
 import glob
 import hashlib
 import os
-import platform
 import shutil
 import subprocess
 import sys
 import tarfile
-import tempfile
 import zipfile
 from io import BytesIO
 from pathlib import Path
@@ -205,26 +203,6 @@ def _native_triplet() -> str:
 # macOS: repack GNU ar archives as BSD ar (macOS ld can't link GNU format)
 # ---------------------------------------------------------------------------
 
-def _repack_for_macos(liba: str = "lib/libdogecoin.a"):
-    """If liba is a GNU ar archive, extract objects and repack in BSD ar format."""
-    if not os.path.isfile(liba):
-        return
-    with open(liba, "rb") as f:
-        magic = f.read(8)
-        if not magic.startswith(b"!<arch>"):
-            return
-        first_name = f.read(16).strip()
-    if not first_name.startswith(b"//"):
-        return  # already BSD format
-    with tempfile.TemporaryDirectory() as tmpdir:
-        subprocess.run(["ar", "-x", os.path.abspath(liba)], cwd=tmpdir, check=True)
-        objs = sorted(os.path.join(tmpdir, f) for f in os.listdir(tmpdir))
-        if not objs:
-            return
-        tmp_out = os.path.abspath(liba) + ".bsd"
-        subprocess.run(["/usr/bin/libtool", "-static", "-o", tmp_out] + objs, check=True)
-        os.replace(tmp_out, liba)
-    ok("Repacked libdogecoin.a in BSD ar format for macOS ld")
 
 
 # ---------------------------------------------------------------------------
@@ -262,6 +240,9 @@ def main():
     parser.add_argument("--sha256", default=None,
                         help="expected SHA256 of the source tarball "
                              "(source-only releases; ignored for binary releases)")
+    parser.add_argument("--source", action="store_true",
+                        help="force source build even if a binary release exists "
+                             "(use when the pre-built archive format is incompatible)")
     args = parser.parse_args()
 
     host = args.host
@@ -281,7 +262,10 @@ def main():
     checksums_url = f"{GITHUB_BASE}/releases/download/v{tag}/SHA256SUMS.asc"
     probe = requests.head(checksums_url, allow_redirects=True)
 
-    if probe.status_code == 200:
+    if args.source:
+        print("Source build forced — skipping pre-built archive.")
+        build_from_source(tag, host, args.sha256)
+    elif probe.status_code == 200:
         print("Binary release detected — fetching pre-built archive.")
         fetch_binary(tag, host)
     elif probe.status_code == 404:
@@ -289,9 +273,6 @@ def main():
         build_from_source(tag, host, args.sha256)
     else:
         err(f"Unexpected HTTP {probe.status_code} probing {checksums_url}")
-
-    if platform.system() == "Darwin":
-        _repack_for_macos()
 
     cleanup(tag, host)
     ok(f"libdogecoin v{tag} ready in lib/ and include/")
