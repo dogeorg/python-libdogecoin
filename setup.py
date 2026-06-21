@@ -32,4 +32,6 @@ setup(
     cffi_modules=["python/_build.py:ffibuilder"],
     install_requires=["cffi>=1.16"],
     include_package_data=True,
+    # One stable-ABI wheel per platform covers CPython 3.10 through 3.13+.
+    options={"bdist_wheel": {"py_limited_api": "cp310"}},
 )

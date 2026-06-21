@@ -95,7 +95,7 @@ jobs:
 
       - name: Install Python build dependencies (macOS)
         if: runner.os == 'macOS'
-        run: pip install --upgrade cython setuptools build requests pytest wheel
+        run: pip install --upgrade cffi setuptools build requests pytest wheel
 
       - name: Build wheels for ${{ matrix.host }}
         if: runner.os == 'Windows'
@@ -141,7 +141,7 @@ jobs:
         name: Install Python
         with:
           python-version: '3.10'
-      - run: pip install --upgrade pip cython setuptools build
+      - run: pip install --upgrade pip cffi setuptools build
 
       - name: Build sdist
         run: |

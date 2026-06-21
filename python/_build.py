@@ -47,6 +47,9 @@ ffibuilder.set_source(
     '#include "libdogecoin.h"',
     include_dirs=[str(ROOT / "include")],
     extra_objects=[str(LIBA)],
+    # Build against the CPython stable ABI so a single wheel per platform
+    # serves CPython 3.10+ instead of one wheel per interpreter minor.
+    py_limited_api=True,
 )
 
 if __name__ == "__main__":
