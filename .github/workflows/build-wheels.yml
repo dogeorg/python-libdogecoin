@@ -166,6 +166,14 @@ jobs:
     runs-on: ubuntu-latest
     # upload to PyPI on every tag starting with 'v'
     if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/v')
+    # Trusted Publishing: PyPI verifies this workflow's OIDC identity, so no
+    # long-lived API token is stored. Requires a one-time publisher config on
+    # PyPI (project settings -> Publishing) naming this repo + workflow.
+    environment:
+      name: pypi
+      url: https://pypi.org/project/libdogecoin/
+    permissions:
+      id-token: write
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -180,8 +188,5 @@ jobs:
 
       - uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          user: __token__
-          password: ${{ secrets.PYPI_PASSWORD }}
-          repository_url: https://upload.pypi.org/legacy/
           verbose: true
-          print_hash: true
+          print-hash: true

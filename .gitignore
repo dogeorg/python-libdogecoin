@@ -140,3 +140,9 @@ libdogecoin.c
 # windows python stuff
 bin/amd64/*
 bin/win32/*
+# build artifacts
+*.o
+*.so
+build/
+dist/
+*.egg-info/
