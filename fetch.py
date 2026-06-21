@@ -146,6 +146,7 @@ def build_from_source(tag: str, host: str, expected_sha256: str | None):
         "--disable-net",
         "--enable-static",
         "--disable-shared",
+        "--disable-unistring",
     ]
     # pass --host only when cross-compiling (different CPU arch than native).
     # Normalize arm64↔aarch64 aliases so Apple Silicon doesn't self-cross.

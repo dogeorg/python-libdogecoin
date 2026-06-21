@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     curl tar unzip gpg \
     patchelf \
+    libunistring-dev \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --upgrade pip cffi setuptools wheel build requests "auditwheel==5.1.2" pytest
