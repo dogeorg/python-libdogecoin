@@ -18,10 +18,12 @@ Usage:
 import glob
 import hashlib
 import os
+import platform
 import shutil
 import subprocess
 import sys
 import tarfile
+import tempfile
 import zipfile
 from io import BytesIO
 from pathlib import Path
@@ -200,6 +202,32 @@ def _native_triplet() -> str:
 
 
 # ---------------------------------------------------------------------------
+# macOS: repack GNU ar archives as BSD ar (macOS ld can't link GNU format)
+# ---------------------------------------------------------------------------
+
+def _repack_for_macos(liba: str = "lib/libdogecoin.a"):
+    """If liba is a GNU ar archive, extract objects and repack in BSD ar format."""
+    if not os.path.isfile(liba):
+        return
+    with open(liba, "rb") as f:
+        magic = f.read(8)
+        if not magic.startswith(b"!<arch>"):
+            return
+        first_name = f.read(16).strip()
+    if not first_name.startswith(b"//"):
+        return  # already BSD format
+    with tempfile.TemporaryDirectory() as tmpdir:
+        subprocess.run(["ar", "-x", os.path.abspath(liba)], cwd=tmpdir, check=True)
+        objs = sorted(os.path.join(tmpdir, f) for f in os.listdir(tmpdir))
+        if not objs:
+            return
+        tmp_out = os.path.abspath(liba) + ".bsd"
+        subprocess.run(["/usr/bin/libtool", "-static", "-o", tmp_out] + objs, check=True)
+        os.replace(tmp_out, liba)
+    ok("Repacked libdogecoin.a in BSD ar format for macOS ld")
+
+
+# ---------------------------------------------------------------------------
 # Cleanup
 # ---------------------------------------------------------------------------
 
@@ -261,6 +289,9 @@ def main():
         build_from_source(tag, host, args.sha256)
     else:
         err(f"Unexpected HTTP {probe.status_code} probing {checksums_url}")
+
+    if platform.system() == "Darwin":
+        _repack_for_macos()
 
     cleanup(tag, host)
     ok(f"libdogecoin v{tag} ready in lib/ and include/")
