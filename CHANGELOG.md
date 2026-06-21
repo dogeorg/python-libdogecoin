@@ -4,6 +4,46 @@ All notable changes to `python-libdogecoin` are documented here. This project
 adheres to [Semantic Versioning](https://semver.org/) and the bound C surface
 tracks whichever libdogecoin release is fetched at build time.
 
+## [0.1.3.2] - 2026-06-21
+
+This release supersedes the broken 0.1.3. PyPI uploads are immutable, so 0.1.3
+could not be corrected in place; the fix ships under a new version number,
+0.1.3.2, while still building against libdogecoin **C-library 0.1.3** (there is
+no C-library 0.1.3.2). The Python package version and the C-library tag are
+intentionally decoupled — see `LIBDOGECOIN_TAG` in `fetch.py`.
+
+### Removed
+- Withdrew the partial SPV surface that shipped in 0.1.3:
+  `w_dogecoin_get_balance`, `w_dogecoin_get_balance_str`,
+  `w_dogecoin_get_utxo_txid_str`, and `w_dogecoin_unregister_watch_address`.
+  These query a libdogecoin SPV node (`dogecoin_spv_client`) that the binding
+  gives no way to create, configure, or run, and the `register` half of the
+  register/unregister pair was never bound — so as shipped they could not
+  function. A complete SPV binding (node lifecycle, register + unregister,
+  balance/utxo queries) will land as one coherent feature in a later release.
+
+### Added
+- Codegen curation gate: SPV/net/wallet-node and TPM/secure-element functions
+  are blocked from binding by name pattern unless explicitly opted into
+  `ALLOW_BOUND`, so a deferred-subsystem function in a future libdogecoin header
+  cannot ship by accident (as the SPV surface did). Held-back functions are
+  reported in the build log and recorded under `deferred` in `_surface.json`.
+
+### Fixed
+- `fetch.py` now builds against an explicitly pinned `LIBDOGECOIN_TAG` instead
+  of deriving the C-library tag from the Python package version. This is what
+  lets the Python version (0.1.3.2) differ from the C-library tag (0.1.3) when
+  a re-release forces a new package number.
+- `bin/build` no longer hardcodes `libdogecoin-0.1.1`/`0.1.2` when unpacking the
+  wheel to run tests; the directory is derived from the actual built version.
+  Also dropped a stray `--tag-build=0.1.2` that appended a build tag to the
+  version.
+
+### Note
+- 0.1.3 has been yanked on PyPI for the reason above. Installs resolve to
+  0.1.3.2; anyone pinned to `==0.1.3` is unaffected. 0.1.1 and 0.1.2 never
+  contained these functions and are unaffected.
+
 ## [Unreleased]
 
 ### Added

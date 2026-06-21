@@ -43,6 +43,16 @@ VALID_HOSTS = (
 
 GITHUB_BASE = "https://github.com/dogecoinfoundation/libdogecoin"
 
+# The libdogecoin C-library release this binding builds against. This is pinned
+# explicitly and is DELIBERATELY independent of the Python package version in
+# setup.py. The two usually match, but they must be free to diverge: a Python
+# release may need a version number that has no C-library counterpart. For
+# example, Python 0.1.3 shipped broken and could not be re-uploaded to PyPI
+# (uploads are immutable), so the fix ships as Python 0.1.3.2 while still
+# building against C-library 0.1.3 — there is no libdogecoin 0.1.3.2.
+# Override at the command line with --tag for local builds against another release.
+LIBDOGECOIN_TAG = "0.1.3"
+
 GREEN = "\033[1;32m"
 RED   = "\033[31m"
 RESET = "\033[0m"
@@ -240,8 +250,9 @@ def main():
     parser.add_argument("--host", required=True,
                         help="target host triplet (e.g. x86_64-pc-linux-gnu)")
     parser.add_argument("--tag", default=None,
-                        help="libdogecoin release tag (e.g. 0.1.1); "
-                             "defaults to version in setup.py")
+                        help="libdogecoin release tag (e.g. 0.1.3); "
+                             "defaults to LIBDOGECOIN_TAG, independent of the "
+                             "Python package version")
     parser.add_argument("--sha256", default=None,
                         help="expected SHA256 of the source tarball "
                              "(source-only releases; ignored for binary releases)")
@@ -256,10 +267,9 @@ def main():
     if args.tag:
         tag = args.tag.lstrip("v")
     else:
-        import re
-        setup_src = open(os.path.join(os.path.dirname(__file__), "setup.py")).read()
-        m = re.search(r'version\s*=\s*["\']([^"\']+)["\']', setup_src)
-        tag = m.group(1) if m else "0.1.2"
+        # Use the explicitly pinned C-library tag, NOT the Python package
+        # version — the two are intentionally decoupled (see LIBDOGECOIN_TAG).
+        tag = LIBDOGECOIN_TAG
 
     print(f"Fetching libdogecoin v{tag} for {host}")
 

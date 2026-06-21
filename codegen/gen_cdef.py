@@ -76,6 +76,40 @@ SKIP_FUNCTIONS = {
     "dogecoin_char_vla", "dogecoin_free",
 }
 
+# --- Curation gate ----------------------------------------------------------
+# A denylist (SKIP_FUNCTIONS) only blocks names someone remembered to add, so a
+# new function in a deferred subsystem ships by accident the moment libdogecoin
+# adds it to the header. 0.1.3 shipped a partial SPV surface exactly this way.
+#
+# This gate blocks whole subsystems by name pattern. A function matching a
+# deferred pattern is NOT bound unless it is explicitly listed in ALLOW_BOUND,
+# so binding a deferred-subsystem function becomes a deliberate, reviewed act
+# rather than a side effect of a header bump. New SPV/net/wallet functions are
+# blocked automatically until someone opts them in.
+DEFERRED_SUBSYSTEM_PATTERNS = (
+    # SPV / wallet node: needs a dogecoin_spv_client lifecycle + runloop that
+    # the binding does not yet expose. Ship as one coherent feature, not piecemeal.
+    "spv", "watch_address", "get_balance", "get_utxo", "get_utxos",
+    "broadcast_raw_tx", "register_watch", "unregister_watch",
+    # networking primitives
+    "net_", "_node", "request_headers",
+    # TPM / secure-element: platform-specific, not universally compiled
+    "_tpm", "_with_sw", "encrypt", "decrypt",
+)
+
+# Functions that match a deferred pattern but ARE approved to bind. Empty by
+# design: adding a name here is the explicit decision to ship it, and should
+# come with the supporting wrapper + lifecycle + tests.
+ALLOW_BOUND: set[str] = set()
+
+
+def is_deferred(name: str) -> bool:
+    """True if name belongs to a deferred subsystem and is not explicitly allowed."""
+    if name in ALLOW_BOUND:
+        return False
+    lname = name.lower()
+    return any(pat in lname for pat in DEFERRED_SUBSYSTEM_PATTERNS)
+
 # size-macro-bearing array params like `char wif[PRIVKEYWIFLEN]` -> `char* wif`.
 ARRAY_PARAM = re.compile(r'^\s*(const\s+)?([A-Za-z_]\w*)\s+(\w+)\s*\[[^\]]*\]\s*$')
 SIMPLE_PARAM = re.compile(r'^\s*(const\s+)?([A-Za-z_][\w\s\*]*?)\s*(\**)\s*(\w+)\s*$')
@@ -160,6 +194,7 @@ def main():
 
     lines = ["/* AUTO-GENERATED from the fetched libdogecoin header. */"]
     bound = []
+    deferred = []
     seen_names: set[str] = set()
     for ret, name, params in protos:
         if name in SKIP_FUNCTIONS:
@@ -167,6 +202,11 @@ def main():
         if name in seen_names:
             continue
         seen_names.add(name)
+        if is_deferred(name):
+            # present in the header but belongs to a deferred subsystem; do not
+            # bind it. Record it so the build log shows what was held back.
+            deferred.append(name)
+            continue
         lowered = [lower_param(p) for p in params]
         sig = f"{lower_ret(ret)} {name}({', '.join(lowered) or 'void'});"
         lines.append(sig)
@@ -174,11 +214,20 @@ def main():
 
     Path(args.out_cdef).write_text("\n".join(lines) + "\n")
     Path(args.out_manifest).write_text(
-        json.dumps({"functions": bound, "count": len(bound)}, indent=2) + "\n"
+        json.dumps(
+            {"functions": bound, "count": len(bound), "deferred": sorted(deferred)},
+            indent=2,
+        )
+        + "\n"
     )
     n_idl = sum(1 for b in bound if b["in_idl"])
     print(f"bound {len(bound)} functions ({n_idl} annotated by IDL, "
           f"{len(bound) - n_idl} header-only) -> {args.out_cdef}")
+    if deferred:
+        print(f"deferred {len(deferred)} function(s) from blocked subsystems "
+              f"(SPV/net/TPM); add to ALLOW_BOUND to bind deliberately:")
+        for n in sorted(deferred):
+            print(f"  - {n}")
 
 
 if __name__ == "__main__":

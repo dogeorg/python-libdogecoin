@@ -624,45 +624,15 @@ def w_sign_transaction_w_privkey(tx_index: int, vout_index: int, privkey) -> int
     return int(_require("sign_transaction_w_privkey")(tx_index, vout_index, _b(privkey)))
 
 
-# === WALLET / SPV UTILITIES (0.1.3+) =========================================
-
-def w_dogecoin_get_balance(address) -> int:
-    """Return the current balance for a watched address in koinu.
-
-    Requires an active SPV node connection.
-    Returns: balance in koinu (1 DOGE = 100000000).
-    """
-    return int(_require("dogecoin_get_balance")(_b(address)))
-
-
-def w_dogecoin_get_balance_str(address) -> str | None:
-    """Return the current balance for a watched address as a decimal coin string.
-
-    Returns: decimal string, or None on failure.
-    """
-    res = _require("dogecoin_get_balance_str")(_b(address))
-    if res == ffi.NULL:
-        return None
-    return ffi.string(res).decode("utf-8")
-
-
-def w_dogecoin_get_utxo_txid_str(address, index: int) -> str | None:
-    """Return the txid string for a specific UTXO of a watched address.
-
-    Returns: txid hex string, or None if not found.
-    """
-    res = _require("dogecoin_get_utxo_txid_str")(_b(address), index)
-    if res == ffi.NULL:
-        return None
-    return ffi.string(res).decode("utf-8")
-
-
-def w_dogecoin_unregister_watch_address(address) -> int:
-    """Unregister a previously watched address from the SPV node.
-
-    Returns: 1 on success, 0 on failure.
-    """
-    return int(_require("dogecoin_unregister_watch_address_with_node")(_b(address)))
+# === WALLET / SPV ============================================================
+# The SPV watch/balance/utxo functions were exposed prematurely in 0.1.3:
+# they query a libdogecoin SPV node (dogecoin_spv_client) that this binding
+# provides no way to create, configure, or run, and the register half of the
+# register/unregister pair was never bound. As shipped they could not function.
+# They are withdrawn here pending a complete SPV binding (node lifecycle
+# new/free/load/discover_peers + a non-blocking runloop, register +
+# unregister, balance/utxo queries) which will land as a single coherent
+# feature rather than a partial surface. See 0.2.0 SPV work.
 
 
 # === SURFACE INTROSPECTION ===================================================

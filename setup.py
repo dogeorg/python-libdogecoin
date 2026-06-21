@@ -10,7 +10,7 @@ from setuptools import setup
 
 setup(
     name="libdogecoin",
-    version="0.1.3",
+    version="0.1.3.2",
     maintainer="bluezr",
     maintainer_email="bluezr@dogecoin.com",
     description="Python interface for the libdogecoin C library",

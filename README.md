@@ -474,30 +474,6 @@ Sign a specific input of a working transaction by vout index.
 **Returns:** 1 on success, 0 on failure
 
 ---
-### w_dogecoin_get_balance(address)
-Return the balance for a watched address in koinu. Requires an active SPV node.
-
-**Returns:** balance as `int` (koinu)
-
----
-### w_dogecoin_get_balance_str(address)
-Return the balance for a watched address as a decimal coin string.
-
-**Returns:** decimal string, or `None` on failure
-
----
-### w_dogecoin_get_utxo_txid_str(address, index)
-Return the txid string for a specific UTXO of a watched address.
-
-**Returns:** txid hex string, or `None` if not found
-
----
-### w_dogecoin_unregister_watch_address(address)
-Unregister a previously watched address from the SPV node.
-
-**Returns:** 1 on success, 0 on failure
-
----
 ## Building from source
 
 Requires a C compiler, `autoconf`, `automake`, and `libtool` (for the source-build fallback).

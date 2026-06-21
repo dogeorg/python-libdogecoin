@@ -192,9 +192,7 @@ fi
 if [ "$TARGET_HOST_TRIPLET" != "x86_64-w64-mingw32" ] || [ "$TARGET_HOST_TRIPLET" != "i686-w64-mingw32" ]; then
     python -m pip install --upgrade -r requirements.txt
     # python -m set --host=$ALL_HOST_TRIPLETS
-    python -m build \
-    -C--build-option=egg_info \
-    -C--build-option=--tag-build=0.1.2 -s -w
+    python -m build -s -w
     TARGET_WHEEL=$(find . -maxdepth 2 -type f -regex "./dist/.*libdogecoin-.*_$ARCH.whl")
     if [ "$OS" == "linux" ]; then
         python -m auditwheel repair --plat $ML $TARGET_WHEEL -w ./wheels
@@ -207,8 +205,13 @@ if [ "$TARGET_HOST_TRIPLET" != "x86_64-w64-mingw32" ] || [ "$TARGET_HOST_TRIPLET
     TARGET_WHEEL=$(find . -maxdepth 2 -type f -regex "./wheels/.*libdogecoin-.*.whl")
     $p -m pip install --upgrade wheel pytest
     $p -m wheel unpack "$TARGET_WHEEL"
-    cp -r ./tests ./libdogecoin-0.1.2/
-    pushd ./libdogecoin-0.1.1
+    # the unpacked dir is libdogecoin-<version>; derive it rather than hardcode,
+    # so any version (including 4-part tags like 0.1.3.2) works. Exclude the
+    # sibling *.dist-info / *.egg-info metadata dirs wheel unpack also creates.
+    UNPACKED_DIR=$(find . -maxdepth 1 -type d -name 'libdogecoin-*' \
+        ! -name '*.dist-info' ! -name '*.egg-info' | head -n1)
+    cp -r ./tests "$UNPACKED_DIR/"
+    pushd "$UNPACKED_DIR"
         $p -m pytest
     popd
     rm -rf *.so *.pyd .pytest_cache __pycache__ tests/__pycache__ libdogecoin-*.egg-info/ libdogecoin-* dist/ build/ *.whl *.so *.c *.egg-info/ lib/libdogecoin.a
