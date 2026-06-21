@@ -10,8 +10,6 @@ was fetched.
 The build regenerates the cdef if the codegen + header are present (in-tree /
 CI), else falls back to the committed python/_cdef.h (sdist consumers).
 """
-import platform
-import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -52,40 +50,13 @@ def _needs_unistring(liba: Path) -> bool:
         return False
 
 
-def _find_libunistring() -> str | None:
-    """Locate libunistring.a — pkg-config first, then multiarch fallback."""
-    if shutil.which("pkg-config"):
-        try:
-            libdir = subprocess.check_output(
-                ["pkg-config", "--variable=libdir", "libunistring"],
-                stderr=subprocess.DEVNULL, text=True).strip()
-            if libdir:
-                p = Path(libdir) / "libunistring.a"
-                if p.exists():
-                    return str(p)
-        except subprocess.CalledProcessError:
-            pass
-    arch_map = {
-        "x86_64": "x86_64-linux-gnu",
-        "aarch64": "aarch64-linux-gnu",
-        "armv7l": "arm-linux-gnueabihf",
-        "i686": "i386-linux-gnu",
-    }
-    multiarch = arch_map.get(platform.machine(), "")
-    for d in [f"/usr/lib/{multiarch}", "/usr/lib", "/usr/local/lib"]:
-        p = Path(d) / "libunistring.a"
-        if p.exists():
-            return str(p)
-    return None
-
-
-def _extra_objects() -> list[str]:
-    objs = [str(LIBA)]
+def _libraries() -> list[str]:
+    # The system libunistring.a on Debian/Ubuntu x86_64 is not compiled with
+    # -fPIC and cannot be statically linked into a .so. Use the shared lib
+    # instead; auditwheel will vendor libunistring.so into the manylinux wheel.
     if LIBA.exists() and _needs_unistring(LIBA):
-        u = _find_libunistring()
-        if u:
-            objs.append(u)
-    return objs
+        return ["unistring"]
+    return []
 
 
 ffibuilder = FFI()
@@ -94,7 +65,8 @@ ffibuilder.set_source(
     "libdogecoin._libdogecoin_cffi",
     '#include "libdogecoin.h"',
     include_dirs=[str(ROOT / "include")],
-    extra_objects=_extra_objects(),
+    extra_objects=[str(LIBA)],
+    libraries=_libraries(),
     # Build against the CPython stable ABI so a single wheel per platform
     # serves CPython 3.10+ instead of one wheel per interpreter minor.
     py_limited_api=True,
