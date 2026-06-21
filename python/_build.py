@@ -51,9 +51,12 @@ def _needs_unistring(liba: Path) -> bool:
 
 
 def _libraries() -> list[str]:
-    # The system libunistring.a on Debian/Ubuntu x86_64 is not compiled with
-    # -fPIC and cannot be statically linked into a .so. Use the shared lib
-    # instead; auditwheel will vendor libunistring.so into the manylinux wheel.
+    # Linux dlopen uses RTLD_NOW: all symbols must resolve at load time.
+    # Provide libunistring.so dynamically; auditwheel vendors it into the wheel.
+    # macOS dyld lazy-binds, so uninorm_nfkd being undefined in the pre-built
+    # libdogecoin.a is harmless — don't add unistring there.
+    if sys.platform != "linux":
+        return []
     if LIBA.exists() and _needs_unistring(LIBA):
         return ["unistring"]
     return []
