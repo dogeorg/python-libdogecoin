@@ -102,8 +102,8 @@ def entry(data: bytes) -> str:
 
 pkg_files = {
     "libdogecoin/__init__.py":          (root / "python" / "libdogecoin" / "__init__.py").read_bytes(),
-    "libdogecoin/_cdef.h":              (root / "python" / "_cdef.h").read_bytes(),
-    "libdogecoin/_surface.json":        (root / "python" / "_surface.json").read_bytes(),
+    "libdogecoin/_cdef.h":              (root / "python" / "libdogecoin" / "_cdef.h").read_bytes(),
+    "libdogecoin/_surface.json":        (root / "python" / "libdogecoin" / "_surface.json").read_bytes(),
     "libdogecoin/_libdogecoin_cffi.pyd": (root / "_libdogecoin_cffi.pyd").read_bytes(),
 }
 

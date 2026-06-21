@@ -19,8 +19,8 @@ from cffi import FFI
 ROOT = Path(__file__).resolve().parent.parent
 HEADER = ROOT / "include" / "libdogecoin.h"
 LIBA = ROOT / "lib" / "libdogecoin.a"
-CDEF = ROOT / "python" / "_cdef.h"
-MANIFEST = ROOT / "python" / "_surface.json"
+CDEF = ROOT / "python" / "libdogecoin" / "_cdef.h"
+MANIFEST = ROOT / "python" / "libdogecoin" / "_surface.json"
 CODEGEN = ROOT / "codegen" / "gen_cdef.py"
 
 
