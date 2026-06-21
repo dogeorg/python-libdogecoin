@@ -1,11 +1,23 @@
 {
   "functions": [
     {
+      "name": "chain_from_b58_prefix_bool",
+      "in_idl": false
+    },
+    {
       "name": "dogecoin_ecc_start",
       "in_idl": true
     },
     {
       "name": "dogecoin_ecc_stop",
+      "in_idl": true
+    },
+    {
+      "name": "isTestnetFromB58Prefix",
+      "in_idl": true
+    },
+    {
+      "name": "isMainnetFromB58Prefix",
       "in_idl": true
     },
     {
@@ -41,6 +53,86 @@
       "in_idl": true
     },
     {
+      "name": "getAddressFromPubkey",
+      "in_idl": true
+    },
+    {
+      "name": "getPubkeyFromPrivkey",
+      "in_idl": true
+    },
+    {
+      "name": "genPrivkey",
+      "in_idl": true
+    },
+    {
+      "name": "dogecoin_p2pkh_address_to_pubkey_hash",
+      "in_idl": true
+    },
+    {
+      "name": "dogecoin_address_to_pubkey_hash",
+      "in_idl": false
+    },
+    {
+      "name": "dogecoin_private_key_wif_to_pubkey_hash",
+      "in_idl": false
+    },
+    {
+      "name": "getAddrFromPubkeyHash",
+      "in_idl": true
+    },
+    {
+      "name": "getWifEncodedPrivKey",
+      "in_idl": true
+    },
+    {
+      "name": "getDecodedPrivKeyWif",
+      "in_idl": true
+    },
+    {
+      "name": "getHDRootKeyFromSeed",
+      "in_idl": true
+    },
+    {
+      "name": "getHDPubKey",
+      "in_idl": true
+    },
+    {
+      "name": "deriveExtKeyFromHDKey",
+      "in_idl": true
+    },
+    {
+      "name": "deriveExtPubKeyFromHDKey",
+      "in_idl": true
+    },
+    {
+      "name": "genHDMaster",
+      "in_idl": true
+    },
+    {
+      "name": "printNode",
+      "in_idl": false
+    },
+    {
+      "name": "deriveHDExtFromMaster",
+      "in_idl": true
+    },
+    {
+      "name": "getHDNodePrivateKeyWIFByPath",
+      "in_idl": false
+    },
+    {
+      "name": "deriveBIP44ExtendedKey",
+      "in_idl": true
+    },
+    {
+      "name": "deriveBIP44ExtendedPublicKey",
+      "in_idl": true
+    },
+    {
+      "name": "utils_uint8_to_hex",
+      "in_idl": false
+    },
+    {
       "name": "generateEnglishMnemonic",
       "in_idl": true
     },
@@ -74,6 +166,10 @@
     },
     {
       "name": "sign_transaction",
+      "in_idl": false
+    },
+    {
+      "name": "sign_transaction_w_privkey",
       "in_idl": false
     },
     {
@@ -117,11 +213,11 @@
       "in_idl": false
     },
     {
-      "name": "dogecoin_char_vla",
-      "in_idl": false
+      "name": "koinu_to_coins_str",
+      "in_idl": true
     },
     {
-      "name": "dogecoin_free",
+      "name": "coins_to_koinu_str",
       "in_idl": true
     },
     {
@@ -135,7 +231,27 @@
     {
       "name": "verify_message",
       "in_idl": true
+    },
+    {
+      "name": "dogecoin_unregister_watch_address_with_node",
+      "in_idl": false
+    },
+    {
+      "name": "dogecoin_get_utxos_length",
+      "in_idl": false
+    },
+    {
+      "name": "dogecoin_get_utxo_txid_str",
+      "in_idl": false
+    },
+    {
+      "name": "dogecoin_get_balance",
+      "in_idl": false
+    },
+    {
+      "name": "dogecoin_get_balance_str",
+      "in_idl": false
     }
   ],
-  "count": 34
+  "count": 63
 }

@@ -11,6 +11,7 @@ A Python interface to the [libdogecoin](https://github.com/dogecoinfoundation/li
 | Linux aarch64 | `manylinux2014_aarch64` |
 | Linux armv7l | `manylinux2014_armv7l` |
 | macOS x86\_64 | `macosx_10_9_x86_64` |
+| macOS arm64 | `macosx_11_0_arm64` |
 | Windows x86\_64 | `win_amd64` |
 | Windows i686 | `win32` |
 
@@ -320,6 +321,183 @@ print(available())
 # ['dogecoin_ecc_start', 'dogecoin_ecc_stop', 'generatePrivPubKeypair', ...]
 ```
 
+---
+### w_is_testnet_from_b58prefix(address)
+Return True if the address has a testnet base58 prefix.
+
+---
+### w_is_mainnet_from_b58prefix(address)
+Return True if the address has a mainnet base58 prefix.
+
+---
+### w_get_address_from_pubkey(pubkey_hex, is_testnet=False)
+Derive a p2pkh address from a compressed public key (hex string).
+
+**Returns:** p2pkh address string, or `None` on failure
+
+---
+### w_get_pubkey_from_privkey(privkey_wif, is_testnet=False)
+Derive the compressed public key (hex) from a WIF-encoded private key.
+
+**Returns:** pubkey hex string, or `None` on failure
+
+---
+### w_gen_privkey(is_testnet=False)
+Generate a new private key.
+
+**Returns:** `(wif_privkey, privkey_hex)` tuple, or `None` on failure
+
+---
+### w_dogecoin_address_to_pubkey_hash(p2pkh)
+Convert a p2pkh address to its pubkey hash hex string (library-allocated).
+
+**Returns:** pubkey hash hex string, or `None` on failure
+
+---
+### w_dogecoin_private_key_wif_to_pubkey_hash(privkey_wif)
+Derive the pubkey hash hex string from a WIF private key (library-allocated).
+
+**Returns:** pubkey hash hex string, or `None` on failure
+
+---
+### w_dogecoin_p2pkh_address_to_pubkey_hash(p2pkh)
+Convert a p2pkh address to its pubkey hash (scripthash) hex string.
+
+**Returns:** pubkey hash hex string, or `None` on failure
+
+---
+### w_get_addr_from_pubkey_hash(pubkey_hash, is_testnet=False)
+Convert a pubkey hash hex string back to a p2pkh address.
+
+**Returns:** p2pkh address string, or `None` on failure
+
+---
+### w_get_wif_encoded_privkey(privkey_hex, is_testnet=False)
+WIF-encode a raw private key given as a 64-character hex string.
+
+**Returns:** WIF-encoded private key string
+
+---
+### w_get_decoded_privkey_wif(privkey_wif, is_testnet=False)
+Decode a WIF-encoded private key to its 64-character hex representation.
+
+**Returns:** privkey hex string, or `None` on failure
+
+---
+### w_get_hd_root_key_from_seed(seed_bytes, is_testnet=False)
+Derive an HD master private key from a 64-byte BIP32 seed.
+
+**Parameters:**
+- `seed_bytes` — 64 bytes (e.g. from `w_dogecoin_seed_from_mnemonic`)
+- `is_testnet` — False for mainnet, True for testnet
+
+**Returns:** HD master key string (xprv-style), or `None` on failure
+
+---
+### w_get_hd_pub_key(hdkey, is_testnet=False)
+Extract the extended public key (xpub) from an extended private key.
+
+**Returns:** xpub string, or `None` on failure
+
+---
+### w_derive_ext_key_from_hd_key(extkey, keypath, is_testnet=False)
+Derive an extended private key from another extended key by BIP32 path.
+
+**Returns:** derived extended key string, or `None` on failure
+
+---
+### w_derive_ext_pub_key_from_hd_key(extpubkey, keypath, is_testnet=False)
+Derive an extended public key from an extended public key by BIP32 path.
+
+**Returns:** derived extended public key string, or `None` on failure
+
+---
+### w_gen_hd_master(is_testnet=False)
+Generate a new random HD master private key.
+
+**Returns:** HD master key string (xprv-style), or `None` on failure
+
+---
+### w_derive_hd_ext_from_master(masterkey, keypath, is_testnet=False)
+Derive an extended key from a master key by explicit BIP32 path string.
+
+**Returns:** derived extended key string, or `None` on failure
+
+---
+### w_get_hd_node_privkey_wif_by_path(masterkey, derived_path, outprivkey=False)
+Derive a WIF private key or p2pkh address from an HD master key by path.
+
+**Parameters:**
+- `masterkey` — HD master private key
+- `derived_path` — BIP32 derivation path string (e.g. `"m/44'/3'/0'/0/0"`)
+- `outprivkey` — if True return the WIF private key; otherwise return the p2pkh address
+
+**Returns:** string result (library-allocated), or `None` on failure
+
+---
+### w_derive_bip44_extended_key(masterkey, account, change_level, address_index, path=None, is_testnet=False)
+Derive a BIP44 extended private key.
+
+**Parameters:**
+- `masterkey` — HD master private key
+- `account` — BIP44 account number, or `None`
+- `change_level` — `"0"` for external chain, `"1"` for internal/change
+- `address_index` — address index, or `None`
+- `path` — explicit key path override string, or `None`
+
+**Returns:** `(extended_key, keypath)` tuple, or `None` on failure
+
+---
+### w_derive_bip44_extended_public_key(masterkey, account, change_level, address_index, path=None, is_testnet=False)
+Derive a BIP44 extended public key.
+
+**Parameters:** same as `w_derive_bip44_extended_key`
+
+**Returns:** `(extended_pubkey, keypath)` tuple, or `None` on failure
+
+---
+### w_koinu_to_coins_str(koinu)
+Convert a koinu integer (1 DOGE = 100000000 koinu) to a decimal coin string.
+
+**Returns:** decimal string (e.g. `"1.00000000"`), or `None` on failure
+
+---
+### w_coins_to_koinu_str(coins)
+Convert a decimal coin string (e.g. `"1.5"`) to koinu integer.
+
+**Returns:** koinu value as `int`
+
+---
+### w_sign_transaction_w_privkey(tx_index, vout_index, privkey)
+Sign a specific input of a working transaction by vout index.
+
+**Returns:** 1 on success, 0 on failure
+
+---
+### w_dogecoin_get_balance(address)
+Return the balance for a watched address in koinu. Requires an active SPV node.
+
+**Returns:** balance as `int` (koinu)
+
+---
+### w_dogecoin_get_balance_str(address)
+Return the balance for a watched address as a decimal coin string.
+
+**Returns:** decimal string, or `None` on failure
+
+---
+### w_dogecoin_get_utxo_txid_str(address, index)
+Return the txid string for a specific UTXO of a watched address.
+
+**Returns:** txid hex string, or `None` if not found
+
+---
+### w_dogecoin_unregister_watch_address(address)
+Unregister a previously watched address from the SPV node.
+
+**Returns:** 1 on success, 0 on failure
+
+---
 ## Building from source
 
 Requires a C compiler, `autoconf`, `automake`, and `libtool` (for the source-build fallback).

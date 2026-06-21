@@ -34,6 +34,7 @@ VALID_HOSTS = (
     "aarch64-linux-gnu",
     "x86_64-pc-linux-gnu",
     "x86_64-apple-darwin14",
+    "x86_64-apple-darwin15",
     "aarch64-apple-darwin",
     "x86_64-w64-mingw32",
     "i686-w64-mingw32",
@@ -146,9 +147,12 @@ def build_from_source(tag: str, host: str, expected_sha256: str | None):
         "--enable-static",
         "--disable-shared",
     ]
-    # pass --host only when cross-compiling (different CPU arch than native)
-    native_cpu = _native_triplet().split('-')[0]
-    target_cpu = host.split('-')[0]
+    # pass --host only when cross-compiling (different CPU arch than native).
+    # Normalize arm64↔aarch64 aliases so Apple Silicon doesn't self-cross.
+    _cpu_alias = {"arm64": "aarch64"}
+    native_cpu = _cpu_alias.get(_native_triplet().split('-')[0],
+                                _native_triplet().split('-')[0])
+    target_cpu = _cpu_alias.get(host.split('-')[0], host.split('-')[0])
     if native_cpu != target_cpu:
         configure_args.append(f"--host={host}")
 

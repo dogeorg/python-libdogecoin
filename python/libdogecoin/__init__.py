@@ -24,6 +24,16 @@ _PASS_LEN = 256        # MAX_PASS_SIZE
 _SEED_LEN = 64         # MAX_SEED_SIZE (bytes)
 _HEX_ENT_LEN = 65     # MAX_HEX_ENT_SIZE
 
+# 0.1.3+ sizes
+_PUBKEY_HEX_LEN = 67   # PUBKEYHEXLEN
+_PUBKEY_HASH_LEN = 41  # PUBKEYHASHLEN
+_PRIVKEY_HEX_LEN = 32  # DOGECOIN_ECKEY_PKEY_LENGTH (raw 32-byte key, hex = 64+1)
+_PRIVKEY_HEX_STR_LEN = 65  # 64 hex chars + NUL
+_HD_KEY_LEN = 128      # HDKEYLEN (112 in header but library uses 128)
+_KEY_PATH_LEN = 256    # KEYPATHMAXLEN
+_KOINU_STR_LEN = 32    # enough for uint64 in decimal + decimal point
+_BALANCE_STR_LEN = 32
+
 
 def _has(name: str) -> bool:
     return hasattr(lib, name)
@@ -346,6 +356,313 @@ def w_verify_message(signature, message, address) -> bool:
     Returns: True if the signature is valid, False otherwise.
     """
     return bool(_require("verify_message")(_b(signature), _b(message), _b(address)))
+
+
+# === ADDRESS / PUBKEY UTILITIES (0.1.3+) =====================================
+
+def w_is_testnet_from_b58prefix(address) -> bool:
+    """Return True if the address has a testnet base58 prefix."""
+    return bool(_require("isTestnetFromB58Prefix")(_b(address)))
+
+
+def w_is_mainnet_from_b58prefix(address) -> bool:
+    """Return True if the address has a mainnet base58 prefix."""
+    return bool(_require("isMainnetFromB58Prefix")(_b(address)))
+
+
+def w_get_address_from_pubkey(pubkey_hex, is_testnet: bool = False):
+    """Derive a p2pkh address from a compressed public key (hex).
+
+    Returns: p2pkh address string, or None on failure.
+    """
+    out = _buf(_P2PKH_LEN + 4)
+    rc = _require("getAddressFromPubkey")(_b(pubkey_hex), int(is_testnet), out)
+    return _s(out) if rc else None
+
+
+def w_get_pubkey_from_privkey(privkey_wif, is_testnet: bool = False):
+    """Derive the compressed public key (hex) from a WIF private key.
+
+    Returns: pubkey hex string, or None on failure.
+    """
+    out = _buf(_PUBKEY_HEX_LEN)
+    sz = ffi.new("size_t[1]", [_PUBKEY_HEX_LEN])
+    rc = _require("getPubkeyFromPrivkey")(_b(privkey_wif), int(is_testnet), out, sz)
+    return _s(out) if rc else None
+
+
+def w_gen_privkey(is_testnet: bool = False):
+    """Generate a new private key.
+
+    Returns: (wif_privkey, privkey_hex) tuple, or None on failure.
+    """
+    wif = _buf(_PRIVKEY_WIF_LEN)
+    hex_key = _buf(_PRIVKEY_HEX_STR_LEN)
+    rc = _require("genPrivkey")(int(is_testnet), wif, _PRIVKEY_WIF_LEN, hex_key)
+    return (_s(wif), _s(hex_key)) if rc else None
+
+
+def w_dogecoin_address_to_pubkey_hash(p2pkh) -> str | None:
+    """Convert a p2pkh address to its pubkey hash hex string (lib-allocated).
+
+    Returns: pubkey hash hex string, or None on failure.
+    """
+    res = _require("dogecoin_address_to_pubkey_hash")(_b(p2pkh))
+    if res == ffi.NULL:
+        return None
+    return ffi.string(res).decode("utf-8")
+
+
+def w_dogecoin_private_key_wif_to_pubkey_hash(privkey_wif) -> str | None:
+    """Derive the pubkey hash hex string from a WIF private key (lib-allocated).
+
+    Returns: pubkey hash hex string, or None on failure.
+    """
+    res = _require("dogecoin_private_key_wif_to_pubkey_hash")(_b(privkey_wif))
+    if res == ffi.NULL:
+        return None
+    return ffi.string(res).decode("utf-8")
+
+
+def w_dogecoin_p2pkh_address_to_pubkey_hash(p2pkh):
+    """Convert a p2pkh address to its pubkey hash (scripthash) hex string.
+
+    Returns: pubkey hash hex string, or None on failure.
+    """
+    out = _buf(_PUBKEY_HASH_LEN)
+    rc = _require("dogecoin_p2pkh_address_to_pubkey_hash")(_b(p2pkh), out)
+    return _s(out) if rc else None
+
+
+def w_get_addr_from_pubkey_hash(pubkey_hash, is_testnet: bool = False):
+    """Convert a pubkey hash hex string to a p2pkh address.
+
+    Returns: p2pkh address string, or None on failure.
+    """
+    out = _buf(_P2PKH_LEN + 4)
+    rc = _require("getAddrFromPubkeyHash")(_b(pubkey_hash), int(is_testnet), out)
+    return _s(out) if rc else None
+
+
+def w_get_wif_encoded_privkey(privkey_hex, is_testnet: bool = False):
+    """WIF-encode a raw 32-byte private key (given as 64-char hex string).
+
+    Returns: WIF-encoded private key string.
+    """
+    out = _buf(_PRIVKEY_WIF_LEN)
+    sz = ffi.new("size_t[1]", [_PRIVKEY_WIF_LEN])
+    _require("getWifEncodedPrivKey")(_b(privkey_hex), int(is_testnet), out, sz)
+    return _s(out)
+
+
+def w_get_decoded_privkey_wif(privkey_wif, is_testnet: bool = False):
+    """Decode a WIF-encoded private key to its 32-byte hex representation.
+
+    Returns: privkey hex string, or None on failure.
+    """
+    out = _buf(_PRIVKEY_HEX_STR_LEN)
+    rc = _require("getDecodedPrivKeyWif")(_b(privkey_wif), int(is_testnet), out)
+    return _s(out) if rc else None
+
+
+# === HD KEY UTILITIES (0.1.3+) ===============================================
+
+def w_get_hd_root_key_from_seed(seed_bytes: bytes, is_testnet: bool = False):
+    """Derive an HD master key from a 64-byte BIP32 seed.
+
+    seed_bytes: 64 bytes (e.g. from w_dogecoin_seed_from_mnemonic)
+    Returns: HD master key string (xprv), or None on failure.
+    """
+    seed_buf = ffi.new("uint8_t[]", seed_bytes)
+    out = _buf(_HD_KEY_LEN)
+    rc = _require("getHDRootKeyFromSeed")(seed_buf, len(seed_bytes), int(is_testnet), out)
+    return _s(out) if rc else None
+
+
+def w_get_hd_pub_key(hdkey, is_testnet: bool = False):
+    """Extract the extended public key (xpub) from an extended private key.
+
+    Returns: xpub string, or None on failure.
+    """
+    out = _buf(_HD_KEY_LEN)
+    rc = _require("getHDPubKey")(_b(hdkey), int(is_testnet), out)
+    return _s(out) if rc else None
+
+
+def w_derive_ext_key_from_hd_key(extkey, keypath, is_testnet: bool = False):
+    """Derive an extended private key from another extended key by path.
+
+    Returns: derived extended key string, or None on failure.
+    """
+    out = _buf(_HD_KEY_LEN)
+    rc = _require("deriveExtKeyFromHDKey")(
+        _b(extkey), _b(keypath), int(is_testnet), out)
+    return _s(out) if rc else None
+
+
+def w_derive_ext_pub_key_from_hd_key(extpubkey, keypath, is_testnet: bool = False):
+    """Derive an extended public key from an extended public key by path.
+
+    Returns: derived extended public key string, or None on failure.
+    """
+    out = _buf(_HD_KEY_LEN)
+    rc = _require("deriveExtPubKeyFromHDKey")(
+        _b(extpubkey), _b(keypath), int(is_testnet), out)
+    return _s(out) if rc else None
+
+
+def w_gen_hd_master(is_testnet: bool = False):
+    """Generate a new random HD master private key.
+
+    Returns: HD master key string (xprv), or None on failure.
+    """
+    out = _buf(_HD_KEY_LEN)
+    rc = _require("genHDMaster")(int(is_testnet), out, _HD_KEY_LEN)
+    return _s(out) if rc else None
+
+
+def w_derive_hd_ext_from_master(masterkey, keypath, is_testnet: bool = False):
+    """Derive an extended key from a master key by explicit path.
+
+    Returns: derived extended key string, or None on failure.
+    """
+    out = _buf(_HD_KEY_LEN)
+    rc = _require("deriveHDExtFromMaster")(
+        int(is_testnet), _b(masterkey), _b(keypath), out, _HD_KEY_LEN)
+    return _s(out) if rc else None
+
+
+def w_get_hd_node_privkey_wif_by_path(masterkey, derived_path,
+                                       outprivkey: bool = False) -> str | None:
+    """Derive a WIF private key (or p2pkh address) from an HD master key by path.
+
+    outprivkey=False returns the p2pkh address at that path.
+    outprivkey=True returns the WIF private key at that path.
+    Returns: string result (lib-allocated), or None on failure.
+    """
+    addr_buf = _buf(_P2PKH_LEN + 4)
+    res = _require("getHDNodePrivateKeyWIFByPath")(
+        _b(masterkey), _b(derived_path), addr_buf, int(outprivkey))
+    if res == ffi.NULL:
+        return None
+    return ffi.string(res).decode("utf-8")
+
+
+def w_derive_bip44_extended_key(masterkey, account: int | None,
+                                 change_level,
+                                 address_index: int | None,
+                                 path=None,
+                                 is_testnet: bool = False):
+    """Derive a BIP44 extended private key.
+
+    account: BIP44 account number, or None to omit (uses library default)
+    change_level: "0" for external chain, "1" for internal/change
+    address_index: address index, or None to omit
+    path: explicit key path override string, or None
+    Returns: (extended_key, keypath) tuple, or None on failure.
+    """
+    acct_p = ffi.NULL if account is None else ffi.new("uint32_t[1]", [account])
+    idx_p = ffi.NULL if address_index is None else ffi.new("uint32_t[1]", [address_index])
+    extkeyout = _buf(_HD_KEY_LEN)
+    keypathout = _buf(_KEY_PATH_LEN)
+    rc = _require("deriveBIP44ExtendedKey")(
+        _b(masterkey), acct_p, _b(str(change_level)), idx_p,
+        _b(path) if path else ffi.NULL, extkeyout, keypathout)
+    return (_s(extkeyout), _s(keypathout)) if rc else None
+
+
+def w_derive_bip44_extended_public_key(masterkey, account: int | None,
+                                        change_level,
+                                        address_index: int | None,
+                                        path=None,
+                                        is_testnet: bool = False):
+    """Derive a BIP44 extended public key.
+
+    account: BIP44 account number, or None to omit
+    change_level: "0" for external chain, "1" for internal/change
+    address_index: address index, or None to omit
+    path: explicit key path override string, or None
+    Returns: (extended_pubkey, keypath) tuple, or None on failure.
+    """
+    acct_p = ffi.NULL if account is None else ffi.new("uint32_t[1]", [account])
+    idx_p = ffi.NULL if address_index is None else ffi.new("uint32_t[1]", [address_index])
+    extkeyout = _buf(_HD_KEY_LEN)
+    keypathout = _buf(_KEY_PATH_LEN)
+    rc = _require("deriveBIP44ExtendedPublicKey")(
+        _b(masterkey), acct_p, _b(str(change_level)), idx_p,
+        _b(path) if path else ffi.NULL, extkeyout, keypathout)
+    return (_s(extkeyout), _s(keypathout)) if rc else None
+
+
+# === KOINU UTILITIES (0.1.3+) ================================================
+
+def w_koinu_to_coins_str(koinu: int) -> str | None:
+    """Convert a koinu (integer, 1 DOGE = 100000000 koinu) to a decimal coin string.
+
+    Returns: decimal string (e.g. "1.00000000"), or None on failure.
+    """
+    out = _buf(_KOINU_STR_LEN)
+    rc = _require("koinu_to_coins_str")(koinu, out)
+    return _s(out) if rc else None
+
+
+def w_coins_to_koinu_str(coins) -> int:
+    """Convert a decimal coin string (e.g. "1.5") to koinu (integer).
+
+    Returns: koinu value as int (1 DOGE = 100000000).
+    """
+    return int(_require("coins_to_koinu_str")(_b(str(coins))))
+
+
+# === TRANSACTION — new 0.1.3 variant =========================================
+
+def w_sign_transaction_w_privkey(tx_index: int, vout_index: int, privkey) -> int:
+    """Sign a specific input of the working transaction by vout index.
+
+    Returns: 1 on success, 0 on failure.
+    """
+    return int(_require("sign_transaction_w_privkey")(tx_index, vout_index, _b(privkey)))
+
+
+# === WALLET / SPV UTILITIES (0.1.3+) =========================================
+
+def w_dogecoin_get_balance(address) -> int:
+    """Return the current balance for a watched address in koinu.
+
+    Requires an active SPV node connection.
+    Returns: balance in koinu (1 DOGE = 100000000).
+    """
+    return int(_require("dogecoin_get_balance")(_b(address)))
+
+
+def w_dogecoin_get_balance_str(address) -> str | None:
+    """Return the current balance for a watched address as a decimal coin string.
+
+    Returns: decimal string, or None on failure.
+    """
+    res = _require("dogecoin_get_balance_str")(_b(address))
+    if res == ffi.NULL:
+        return None
+    return ffi.string(res).decode("utf-8")
+
+
+def w_dogecoin_get_utxo_txid_str(address, index: int) -> str | None:
+    """Return the txid string for a specific UTXO of a watched address.
+
+    Returns: txid hex string, or None if not found.
+    """
+    res = _require("dogecoin_get_utxo_txid_str")(_b(address), index)
+    if res == ffi.NULL:
+        return None
+    return ffi.string(res).decode("utf-8")
+
+
+def w_dogecoin_unregister_watch_address(address) -> int:
+    """Unregister a previously watched address from the SPV node.
+
+    Returns: 1 on success, 0 on failure.
+    """
+    return int(_require("dogecoin_unregister_watch_address_with_node")(_b(address)))
 
 
 # === SURFACE INTROSPECTION ===================================================

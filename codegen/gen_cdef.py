@@ -40,7 +40,41 @@ TYPEDEF_LOWERING = {
 }
 
 # Functions that use opaque struct types not declared in the cdef; skip them.
-SKIP_FUNCTIONS = {"add_eckey", "remove_eckey", "new_eckey", "find_eckey"}
+SKIP_FUNCTIONS = {
+    # eckey struct (all releases)
+    "add_eckey", "remove_eckey", "new_eckey", "find_eckey",
+    # dogecoin_chainparams* params (0.1.3+)
+    "addresses_from_pubkey", "pubkey_from_privatekey", "gen_privatekey",
+    "dogecoin_pubkey_hash_to_p2pkh_address",
+    "dogecoin_privkey_encode_wif", "dogecoin_privkey_decode_wif",
+    # dogecoin_hdnode* params (0.1.3+)
+    "dogecoin_hdnode_public_ckd", "dogecoin_hdnode_from_seed",
+    "dogecoin_hdnode_private_ckd", "dogecoin_hdnode_fill_public_key",
+    "dogecoin_hdnode_serialize_public", "dogecoin_hdnode_serialize_private",
+    "dogecoin_hdnode_get_hash160", "dogecoin_hdnode_get_p2pkh_address",
+    "dogecoin_hdnode_get_pub_hex", "dogecoin_hdnode_deserialize",
+    "dogecoin_hdnode_free",
+    # dogecoin_hdnode* return type (0.1.3+)
+    "getHDNodeAndExtKeyByPath",
+    # low-level hdnode+dogecoin_hdnode* combo (0.1.3+)
+    "derive_bip44_extended_key",
+    # vector* params (0.1.3+)
+    "broadcast_raw_tx", "dogecoin_get_utxo_vector",
+    "vector_free", "vector_add", "vector_remove",
+    "vector_remove_idx", "vector_remove_range", "vector_resize",
+    # TPM functions — platform-specific, not universally compiled (0.1.3+)
+    "dogecoin_encrypt_seed_with_tpm", "dogecoin_decrypt_seed_with_tpm",
+    "dogecoin_generate_mnemonic_encrypt_with_tpm",
+    "dogecoin_decrypt_mnemonic_with_tpm",
+    "dogecoin_generate_hdnode_encrypt_with_tpm",
+    "dogecoin_decrypt_hdnode_with_tpm",
+    "generateRandomEnglishMnemonicTPM",
+    "getDerivedHDAddressFromEncryptedSeed",
+    "getDerivedHDAddressFromEncryptedMnemonic",
+    "getDerivedHDAddressFromEncryptedHDNode",
+    # memory management helpers — not part of the public Python API
+    "dogecoin_char_vla", "dogecoin_free",
+}
 
 # size-macro-bearing array params like `char wif[PRIVKEYWIFLEN]` -> `char* wif`.
 ARRAY_PARAM = re.compile(r'^\s*(const\s+)?([A-Za-z_]\w*)\s+(\w+)\s*\[[^\]]*\]\s*$')
@@ -126,9 +160,13 @@ def main():
 
     lines = ["/* AUTO-GENERATED from the fetched libdogecoin header. */"]
     bound = []
+    seen_names: set[str] = set()
     for ret, name, params in protos:
         if name in SKIP_FUNCTIONS:
             continue
+        if name in seen_names:
+            continue
+        seen_names.add(name)
         lowered = [lower_param(p) for p in params]
         sig = f"{lower_ret(ret)} {name}({', '.join(lowered) or 'void'});"
         lines.append(sig)

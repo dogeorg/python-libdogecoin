@@ -15,6 +15,7 @@ jobs:
             - aarch64-linux
             - x86_64-linux-dbg
             - x86_64-macos
+            - aarch64-macos
             - x86_64-win
             - i686-win
             - i686-linux
@@ -36,9 +37,13 @@ jobs:
             os: ubuntu-22.04
             arch: i386
           - name: x86_64-macos
-            host: x86_64-apple-darwin14
+            host: x86_64-apple-darwin15
             os: macos-latest
             arch: amd64
+          - name: aarch64-macos
+            host: aarch64-apple-darwin
+            os: macos-latest
+            arch: arm64
           - name: x86_64-win
             host: x86_64-w64-mingw32
             os: windows-latest
@@ -100,29 +105,22 @@ jobs:
             bash ./bin/init --arch=${{ matrix.plat-name }}
 
       - name: Build wheels for ${{ matrix.host }}
-        if: matrix.host == 'x86_64-apple-darwin14'
+        if: matrix.host == 'x86_64-apple-darwin15'
         env:
           CC: clang -arch x86_64
           CXX: clang++ -arch x86_64
           ARCHFLAGS: -arch x86_64
           _PYTHON_HOST_PLATFORM: macosx-10.9-x86_64
         run: |
-          brew install autoconf automake libtool
-          # libunistring 1.1 for x86_64 — Homebrew on Apple Silicon is arm64-only
-          curl -fsSL https://ftp.gnu.org/gnu/libunistring/libunistring-1.1.tar.gz \
-            -o libunistring-1.1.tar.gz
-          echo "a2252beeec830ac444b9f68d6b38ad883db19919db35b52222cf827c385bdb6a  libunistring-1.1.tar.gz" \
-            | shasum -a 256 -c
-          tar xzf libunistring-1.1.tar.gz
-          cd libunistring-1.1
-          ./configure --host=x86_64-apple-darwin14 --prefix=/tmp/libunistring-x86_64 \
-            --disable-shared --enable-static \
-            CC=clang CFLAGS="-arch x86_64 -fPIC"
-          make -j$(sysctl -n hw.logicalcpu)
-          make install
-          cd ..
-          export LDFLAGS="-L/tmp/libunistring-x86_64/lib"
-          export CPPFLAGS="-I/tmp/libunistring-x86_64/include"
+          mkdir -p wheels
+          python fetch.py --host=${{ matrix.host }}
+          python -m build -w
+          cp ./dist/*.whl ./wheels
+
+      - name: Build wheels for ${{ matrix.host }}
+        if: matrix.host == 'aarch64-apple-darwin'
+        run: |
+          brew install autoconf automake libtool libunistring
           mkdir -p wheels
           python fetch.py --host=${{ matrix.host }} --source
           python -m build -w
