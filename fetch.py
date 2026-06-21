@@ -146,10 +146,10 @@ def build_from_source(tag: str, host: str, expected_sha256: str | None):
         "--enable-static",
         "--disable-shared",
     ]
-    # cross-compilation: pass --host only when not building natively
-    native_hosts = {"x86_64-pc-linux-gnu", "i686-pc-linux-gnu",
-                    "aarch64-linux-gnu", "arm-linux-gnueabihf"}
-    if host not in native_hosts or host != _native_triplet():
+    # pass --host only when cross-compiling (different CPU arch than native)
+    native_cpu = _native_triplet().split('-')[0]
+    target_cpu = host.split('-')[0]
+    if native_cpu != target_cpu:
         configure_args.append(f"--host={host}")
 
     print("Running autogen.sh ...")
