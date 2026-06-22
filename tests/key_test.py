@@ -13,6 +13,14 @@ import libdogecoin as l
 _HAS = getattr(l, "_HAS_TIER3", False) and hasattr(l, "Key")
 
 
+def setup_module(_):
+    l.w_context_start()
+
+
+def teardown_module(_):
+    l.w_context_stop()
+
+
 @unittest.skipUnless(_HAS, "libdogecoin build lacks the dogecoin_key surface")
 class TestKey(unittest.TestCase):
 

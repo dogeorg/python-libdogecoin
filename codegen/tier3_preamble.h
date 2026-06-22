@@ -44,7 +44,7 @@ typedef struct {
 } dogecoin_key;
 
 typedef struct {
-    int compressed;          /* dogecoin_bool */
+    uint8_t compressed;      /* dogecoin_bool = uint8_t */
     uint8_t pubkey[65];
 } dogecoin_pubkey;
 

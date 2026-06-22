@@ -231,27 +231,14 @@
     {
       "name": "verify_message",
       "in_idl": true
-    },
-    {
-      "name": "dogecoin_unregister_watch_address_with_node",
-      "in_idl": false
-    },
-    {
-      "name": "dogecoin_get_utxos_length",
-      "in_idl": false
-    },
-    {
-      "name": "dogecoin_get_utxo_txid_str",
-      "in_idl": false
-    },
-    {
-      "name": "dogecoin_get_balance",
-      "in_idl": false
-    },
-    {
-      "name": "dogecoin_get_balance_str",
-      "in_idl": false
     }
   ],
-  "count": 63
+  "count": 58,
+  "deferred": [
+    "dogecoin_get_balance",
+    "dogecoin_get_balance_str",
+    "dogecoin_get_utxo_txid_str",
+    "dogecoin_get_utxos_length",
+    "dogecoin_unregister_watch_address_with_node"
+  ]
 }
