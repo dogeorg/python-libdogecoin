@@ -16,6 +16,7 @@ typedef struct {
     uint8_t chain_code[32];
     uint8_t private_key[32];
     uint8_t public_key[33];
+    ...;
 } dogecoin_hdnode;
 
 /* chain parameter accessors — return opaque pointers to the library globals */
@@ -41,11 +42,13 @@ int dogecoin_hdnode_deserialize(const char* str, const void* chain, dogecoin_hdn
  *   privkey 32, pubkey uncompressed 65, compressed 33. */
 typedef struct {
     uint8_t privkey[32];
+    ...;
 } dogecoin_key;
 
 typedef struct {
     uint8_t compressed;      /* dogecoin_bool = uint8_t */
     uint8_t pubkey[65];
+    ...;
 } dogecoin_pubkey;
 
 /* key lifecycle */
