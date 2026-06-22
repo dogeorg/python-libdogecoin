@@ -47,6 +47,13 @@ intentionally decoupled — see `LIBDOGECOIN_TAG` in `fetch.py`.
 ## [Unreleased]
 
 ### Added
+- Tier 3 key objects (Layer B): `Key` (EC private key) and `PubKey` on the same
+  managed-handle base, plus sign/verify. `Key.generate()`, `Key.from_wif()` /
+  `to_wif()` (bridging the Tier 1 string world), `pubkey()`, `sign(hash32)`,
+  and `PubKey.verify(hash32, sig)` / `hex()` / `hash160()`. **Security:** a
+  private key cleanses (zeroes) its secret bytes on explicit `free()`, on
+  context-manager exit, and as a GC backstop — prefer `with Key.generate() as k:`
+  so secrets do not linger in memory.
 - Tier 3 object API (foundation): the HD (BIP32) node is now exposed as an
   `HDNode` object with managed lifetime, alongside `MAINNET`/`TESTNET`/`REGTEST`
   chain-parameter handles. Where the flat `w_*` functions take and return
