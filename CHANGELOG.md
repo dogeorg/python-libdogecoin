@@ -4,6 +4,76 @@ All notable changes to `python-libdogecoin` are documented here. This project
 adheres to [Semantic Versioning](https://semver.org/) and the bound C surface
 tracks whichever libdogecoin release is fetched at build time.
 
+## [0.1.4] - 2026-06-22
+
+This release builds against libdogecoin C-library **0.1.4**.
+
+The Tier 3 object API ships **HDNode only**. The EC key/signing object API
+(`Key`/`PubKey`) was built and then deferred before release: its operations
+(`dogecoin_privkey_gen`, `dogecoin_pubkey_from_key`, `dogecoin_key_sign_hash`,
+`dogecoin_pubkey_verify_sig`, ...) are not part of libdogecoin's public
+`libdogecoin.h` surface — they live in internal headers and were reached via
+forward declarations. Binding non-public internal symbols risks silent breakage
+when libdogecoin changes them, which for code that touches private keys is
+unacceptable. The same standard had already removed the transaction and SPV
+object layers for the same reason. No capability is lost: key generation,
+message signing/verification, and transaction signing remain available through
+the public Tier 1 string API (`w_generate_priv_pub_key_pair`, `w_sign_message`,
+`w_verify_message`, `w_sign_transaction`, ...). `Key`/`PubKey` will return as an
+object wrapper once libdogecoin exposes the EC functions publicly.
+
+### Added
+- Tier 3 object API (HDNode): the HD (BIP32) node is exposed as an `HDNode`
+  object with managed lifetime, alongside `MAINNET`/`TESTNET`/`REGTEST`
+  chain-parameter handles. Derive children, read struct fields
+  (`depth`, `child_num`, `public_key`, ...), and serialize, e.g.
+  `HDNode.from_seed(seed).derive_private(0).serialize_private(MAINNET)`.
+  Lifetime is explicit-free-preferred with a GC finalizer backstop: handles
+  support `with`, free exactly once, and raise `UseAfterFreeError` on use after
+  free. Imported only when the linked libdogecoin exposes the
+  `dogecoin_hdnode_*` surface; the Tier 1 `w_*` API is unaffected.
+- Compiler-verified struct layout for `dogecoin_hdnode`: declared with cffi
+  `...;` in the cdef preamble, so the C compiler computes field offsets from the
+  real libdogecoin header at build time. Any layout drift from the headers is
+  caught as a build error rather than silently corrupting memory at runtime.
+- Single stable-ABI (`abi3`) wheel per platform: one wheel now serves CPython
+  3.10 through 3.13+, instead of an interpreter-specific wheel. Newer Python
+  versions no longer fall back to a source build.
+- `python_requires = ">=3.10"`, so older interpreters get a clear
+  "no compatible version" message rather than a failing build.
+- PEP 561 typing support: `py.typed` marker and `__init__.pyi` stubs covering
+  the `HDNode`/`ChainParams` object API and the full `w_*` surface — including
+  the address/pubkey/HD-key utilities, koinu conversion, and
+  `w_sign_transaction_w_privkey` that shipped functionally in the 0.1.3 line but
+  were missing from the previous stub. Enables autocomplete and type checks in
+  downstream code.
+- BIP39 known-answer tests (`tests/bip39_test.py`) asserting the canonical
+  Trezor reference seed vector byte-for-byte. Tests skip cleanly on builds that
+  lack the functions.
+
+### Changed
+- Builds against libdogecoin C-library 0.1.4 (the pinned `LIBDOGECOIN_TAG`).
+  The C-library tag is decoupled from the Python package version, so the two can
+  diverge when needed.
+- PyPI uploads now use Trusted Publishing (OIDC) instead of a stored API token,
+  removing a long-lived publish secret from CI. Requires a one-time publisher
+  configuration on PyPI.
+- Dropped vestigial Cython from the macOS and sdist CI dependency installs.
+
+### Fixed
+- libdogecoin 0.1.4 renamed its release checksum file from `SHA256SUMS.asc` to
+  `checksums.txt`; `fetch.py` now probes both names so the pre-built binary
+  archive is found instead of falling back to a source build that needs
+  autotools on the runner.
+- Skip `sha256_raw` and `hmac_sha1` in the generated cdef: these internal crypto
+  primitives appear in the 0.1.4 header, and `sha256_raw` uses an unresolvable
+  macro (`SHA256_DIGEST_LENGTH`) as an unnamed array-size parameter that cffi
+  rejects with "unsupported expression". They are not part of the Python API.
+
+### Removed
+- Root `libdogecoin.pyx` (byte-identical duplicate of `legacy/libdogecoin.pyx`,
+  which is retained for provenance).
+
 ## [0.1.3.2] - 2026-06-21
 
 This release supersedes the broken 0.1.3. PyPI uploads are immutable, so 0.1.3
@@ -43,56 +113,6 @@ intentionally decoupled — see `LIBDOGECOIN_TAG` in `fetch.py`.
 - 0.1.3 has been yanked on PyPI for the reason above. Installs resolve to
   0.1.3.2; anyone pinned to `==0.1.3` is unaffected. 0.1.1 and 0.1.2 never
   contained these functions and are unaffected.
-
-## [0.1.4] - 2026-06-22
-
-This release builds against libdogecoin C-library **0.1.4**.
-
-The Tier 3 object API ships **HDNode only**. The EC key/signing object API
-(`Key`/`PubKey`) was deferred: those operations (`dogecoin_privkey_gen`,
-`dogecoin_pubkey_from_key`, `dogecoin_key_sign_hash`, ...) are not part of
-libdogecoin's public `libdogecoin.h` surface, and binding non-public internal
-functions risks silent breakage across libdogecoin releases. The same
-capabilities remain available through the public Tier 1 string API
-(`w_generate_priv_pub_key_pair`, `w_sign_message`, `w_verify_message`,
-`w_sign_transaction`, ...). `Key`/`PubKey` will return as an object wrapper once
-libdogecoin exposes the EC functions publicly.
-
-### Added
-- Compiler-verified struct layout for `dogecoin_hdnode`: declared with cffi
-  `...;` in the cdef preamble, so any field-layout drift from the libdogecoin
-  headers is caught at build time rather than silently corrupting memory at
-  runtime.
-- Tier 3 object API (HDNode): the HD (BIP32) node is exposed as an `HDNode`
-  object with managed lifetime, alongside `MAINNET`/`TESTNET`/`REGTEST`
-  chain-parameter handles. Derive children, read struct fields
-  (`depth`, `child_num`, `public_key`, ...), and serialize, e.g.
-  `HDNode.from_seed(seed).derive_private(0).serialize_private(MAINNET)`.
-  Lifetime is explicit-free-preferred with a GC finalizer backstop: handles
-  support `with`, free exactly once, and raise `UseAfterFreeError` on use after
-  free. Imported only when the linked libdogecoin exposes the
-  `dogecoin_hdnode_*` surface; the Tier 1 `w_*` API is unaffected.
-- Single stable-ABI (`abi3`) wheel per platform: one wheel now serves CPython
-  3.10 through 3.13+, instead of an interpreter-specific wheel. Newer Python
-  versions no longer fall back to a source build.
-- `python_requires = ">=3.10"`, so older interpreters get a clear
-  "no compatible version" message rather than a failing build.
-- PEP 561 typing support: `py.typed` marker and `__init__.pyi` stubs for the
-  full `w_*` API and the `HDNode`/`ChainParams` object API, enabling autocomplete
-  and type checks in downstream code.
-- BIP39 known-answer tests (`tests/bip39_test.py`) asserting the canonical
-  Trezor reference seed vector byte-for-byte. Tests skip cleanly on builds that
-  lack the functions.
-
-### Changed
-- PyPI uploads now use Trusted Publishing (OIDC) instead of a stored API token,
-  removing a long-lived publish secret from CI. Requires a one-time publisher
-  configuration on PyPI.
-- Dropped vestigial Cython from the macOS and sdist CI dependency installs.
-
-### Removed
-- Root `libdogecoin.pyx` (byte-identical duplicate of `legacy/libdogecoin.pyx`,
-  which is retained for provenance).
 
 ## [0.1.2] - 2026-06-21
 
