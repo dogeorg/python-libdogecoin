@@ -80,12 +80,14 @@ def _build_double_utxo_single_output():
 class TestExplicitBufferEquivalence(unittest.TestCase):
     """Each _ex variant must produce byte-identical output to its non-_ex twin."""
 
-    @classmethod
-    def setUpClass(cls):
+    def setUp(self):
+        # Restart the ECC context before each test: some _ex functions in
+        # v0.1.5-pre call dogecoin_ecc_stop() as a side effect, leaving the
+        # context dead for subsequent signing tests.
+        l.w_context_stop()
         l.w_context_start()
 
-    @classmethod
-    def tearDownClass(cls):
+    def tearDown(self):
         l.w_context_stop()
 
     def test_get_raw_transaction_ex_matches(self):
@@ -134,17 +136,12 @@ class TestExplicitBufferEquivalence(unittest.TestCase):
         # sign_indexed_raw_transaction_ex(tx_index, input_index, ...) signs one
         # input of a STORED tx and returns the signed hex. Signing input 0 must
         # match w_sign_raw_transaction signing input 0 of the same raw tx.
-        #
-        # Get the baseline FIRST: in v0.1.5-pre, calling sign_indexed_raw_transaction_ex
-        # before sign_raw_transaction triggers an abort in the latter (likely a side
-        # effect on shared ECC context or working-tx state). Establishing the baseline
-        # before the _ex call avoids that ordering dependency.
-        base = l.w_sign_raw_transaction(
-            0, expected_unsigned_tx_hex, utxo_scriptpubkey, 1, privkey_wif)
         idx = l.w_store_raw_transaction(expected_unsigned_tx_hex)
         try:
             ex = l.w_sign_indexed_raw_transaction_ex(
                 idx, 0, utxo_scriptpubkey, 1, privkey_wif)
+            base = l.w_sign_raw_transaction(
+                0, expected_unsigned_tx_hex, utxo_scriptpubkey, 1, privkey_wif)
             self.assertEqual(ex, base)
             self.assertEqual(ex, expected_signed_single_input_tx_hex)
         finally:
@@ -189,12 +186,11 @@ class TestExplicitBufferEquivalence(unittest.TestCase):
 @unittest.skipUnless(_HAS_EX, "libdogecoin build lacks the _ex transaction surface")
 class TestExplicitBufferEdgeCases(unittest.TestCase):
 
-    @classmethod
-    def setUpClass(cls):
+    def setUp(self):
+        l.w_context_stop()
         l.w_context_start()
 
-    @classmethod
-    def tearDownClass(cls):
+    def tearDown(self):
         l.w_context_stop()
 
     def test_get_raw_transaction_ex_bad_index(self):
