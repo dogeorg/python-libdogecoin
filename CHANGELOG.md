@@ -44,9 +44,14 @@ intentionally decoupled — see `LIBDOGECOIN_TAG` in `fetch.py`.
   0.1.3.2; anyone pinned to `==0.1.3` is unaffected. 0.1.1 and 0.1.2 never
   contained these functions and are unaffected.
 
-## [Unreleased]
+## [0.1.4] - 2026-06-22
 
 ### Added
+- Compiler-verified struct layouts: `dogecoin_hdnode`, `dogecoin_key`, and
+  `dogecoin_pubkey` are declared with cffi `...;` in the cdef preamble, so any
+  field layout drift from the libdogecoin headers is caught at build time rather
+  than silently corrupting memory at runtime. (Guards the same class of bug as the
+  `pubkey.compressed` ABI fix that shipped in 0.1.3.2.)
 - Tier 3 key objects (Layer B): `Key` (EC private key) and `PubKey` on the same
   managed-handle base, plus sign/verify. `Key.generate()`, `Key.from_wif()` /
   `to_wif()` (bridging the Tier 1 string world), `pubkey()`, `sign(hash32)`,
@@ -71,9 +76,9 @@ intentionally decoupled — see `LIBDOGECOIN_TAG` in `fetch.py`.
 - `python_requires = ">=3.10"`, so older interpreters get a clear
   "no compatible version" message rather than a failing build.
 - PEP 561 typing support: `py.typed` marker and `__init__.pyi` stubs for the
-  full `w_*` API (including the BIP39/44, message-signing, and QR functions
-  present on newer libdogecoin builds), enabling autocomplete and type checks
-  in downstream code.
+  full `w_*` and Tier 3 object API (`HDNode`, `Key`, `PubKey`, `ChainParams`,
+  `HandleError`, `UseAfterFreeError`, `MAINNET`/`TESTNET`/`REGTEST`), enabling
+  autocomplete and type checks in downstream code.
 - BIP39 known-answer tests (`tests/bip39_test.py`) asserting the canonical
   Trezor reference seed vector byte-for-byte, plus message sign/verify
   round-trips. These guard the key-derivation path, where a wrong seed silently
@@ -117,7 +122,8 @@ intentionally decoupled — see `LIBDOGECOIN_TAG` in `fetch.py`.
 - Final Cython-based release. Address and stateful transaction wrappers over
   libdogecoin v0.1.0.
 
-[Unreleased]: https://github.com/dogeorg/python-libdogecoin/compare/v0.1.2...HEAD
+[0.1.4]: https://github.com/dogeorg/python-libdogecoin/compare/v0.1.3.2...v0.1.4
+[0.1.3.2]: https://github.com/dogeorg/python-libdogecoin/compare/v0.1.2...v0.1.3.2
 [0.1.2]: https://github.com/dogeorg/python-libdogecoin/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/dogeorg/python-libdogecoin/compare/v0.1.0.post1...v0.1.1
 [0.1.0.post1]: https://github.com/dogeorg/python-libdogecoin/releases/tag/v0.1.0.post1
