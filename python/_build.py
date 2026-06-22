@@ -74,6 +74,25 @@ ffibuilder.set_source(
 void* dogecoin_chainparams_main_ptr(void)    { return (void*)&dogecoin_chainparams_main; }
 void* dogecoin_chainparams_test_ptr(void)    { return (void*)&dogecoin_chainparams_test; }
 void* dogecoin_chainparams_regtest_ptr(void) { return (void*)&dogecoin_chainparams_regtest; }
+
+/* Layer B: EC key/pubkey functions present in libdogecoin.a but not declared
+   in libdogecoin.h.  Forward-declare so clang (which errors on implicit
+   function declarations) can compile the cffi-generated C source. */
+void dogecoin_privkey_init(dogecoin_key* privkey);
+int  dogecoin_privkey_is_valid(const dogecoin_key* privkey);
+void dogecoin_privkey_cleanse(dogecoin_key* privkey);
+int  dogecoin_privkey_gen(dogecoin_key* privkey);
+int  dogecoin_privkey_verify_pubkey(dogecoin_key* privkey, dogecoin_pubkey* pubkey);
+void dogecoin_pubkey_init(dogecoin_pubkey* pubkey);
+int  dogecoin_pubkey_is_valid(const dogecoin_pubkey* pubkey);
+void dogecoin_pubkey_cleanse(dogecoin_pubkey* pubkey);
+void dogecoin_pubkey_from_key(const dogecoin_key* privkey, dogecoin_pubkey* pubkey_inout);
+void dogecoin_pubkey_get_hash160(const dogecoin_pubkey* pubkey, uint8_t* hash160);
+int  dogecoin_pubkey_get_hex(const dogecoin_pubkey* pubkey, char* str, size_t* strsize);
+int  dogecoin_key_sign_hash(const dogecoin_key* privkey, const uint8_t* hash,
+                            unsigned char* sigout, size_t* outlen);
+int  dogecoin_pubkey_verify_sig(const dogecoin_pubkey* pubkey, const uint8_t* hash,
+                                unsigned char* sigder, size_t len);
 ''',
     include_dirs=[str(ROOT / "include")],
     extra_objects=[str(LIBA)],
