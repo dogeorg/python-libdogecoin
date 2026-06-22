@@ -117,32 +117,25 @@ class TestExplicitBufferEquivalence(unittest.TestCase):
             l.w_clear_transaction(idx_ex)
 
     def test_sign_raw_transaction_ex_matches(self):
-        # single input
-        base1 = l.w_sign_raw_transaction(
-            0, expected_unsigned_tx_hex, utxo_scriptpubkey, 1, privkey_wif)
+        # Note: w_sign_raw_transaction (non-_ex) calls abort() in libdogecoin
+        # v0.1.5-pre, so we compare directly to known-answer vectors here rather
+        # than using the non-_ex result as a runtime baseline. The vectors were
+        # established against v0.1.4's sign_raw_transaction in transaction_test.py.
         ex1 = l.w_sign_raw_transaction_ex(
             0, expected_unsigned_tx_hex, utxo_scriptpubkey, 1, privkey_wif)
-        self.assertEqual(ex1, base1)
         self.assertEqual(ex1, expected_signed_single_input_tx_hex)
-        # second input, signing on top of the first
-        base2 = l.w_sign_raw_transaction(
-            1, expected_signed_single_input_tx_hex, utxo_scriptpubkey, 1, privkey_wif)
         ex2 = l.w_sign_raw_transaction_ex(
             1, expected_signed_single_input_tx_hex, utxo_scriptpubkey, 1, privkey_wif)
-        self.assertEqual(ex2, base2)
         self.assertEqual(ex2, expected_signed_raw_tx_hex)
 
     def test_sign_indexed_raw_transaction_ex_signs(self):
-        # sign_indexed_raw_transaction_ex(tx_index, input_index, ...) signs one
-        # input of a STORED tx and returns the signed hex. Signing input 0 must
-        # match w_sign_raw_transaction signing input 0 of the same raw tx.
+        # sign_indexed_raw_transaction_ex signs one input of a stored tx.
+        # Compare to known vector; w_sign_raw_transaction (non-_ex) calls
+        # abort() in libdogecoin v0.1.5-pre so cannot be used as baseline.
         idx = l.w_store_raw_transaction(expected_unsigned_tx_hex)
         try:
             ex = l.w_sign_indexed_raw_transaction_ex(
                 idx, 0, utxo_scriptpubkey, 1, privkey_wif)
-            base = l.w_sign_raw_transaction(
-                0, expected_unsigned_tx_hex, utxo_scriptpubkey, 1, privkey_wif)
-            self.assertEqual(ex, base)
             self.assertEqual(ex, expected_signed_single_input_tx_hex)
         finally:
             l.w_clear_transaction(idx)
