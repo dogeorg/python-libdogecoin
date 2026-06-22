@@ -19,16 +19,16 @@ _HAS = getattr(l, "_HAS_TIER3", False)
 SEED = bytes.fromhex("000102030405060708090a0b0c0d0e0f")
 
 
+def setup_module(_):
+    l.w_context_start()
+
+
+def teardown_module(_):
+    l.w_context_stop()
+
+
 @unittest.skipUnless(_HAS, "libdogecoin build lacks the dogecoin_hdnode surface")
 class TestHDNode(unittest.TestCase):
-
-    @classmethod
-    def setUpClass(cls):
-        l.w_context_start()
-
-    @classmethod
-    def tearDownClass(cls):
-        l.w_context_stop()
 
     def test_from_seed_reads_fields(self):
         with l.HDNode.from_seed(SEED) as m:
@@ -67,14 +67,6 @@ class TestHDNode(unittest.TestCase):
 
 @unittest.skipUnless(_HAS, "libdogecoin build lacks the dogecoin_hdnode surface")
 class TestHandleLifetime(unittest.TestCase):
-
-    @classmethod
-    def setUpClass(cls):
-        l.w_context_start()
-
-    @classmethod
-    def tearDownClass(cls):
-        l.w_context_stop()
 
     def test_explicit_free_is_idempotent(self):
         m = l.HDNode.from_seed(SEED)
