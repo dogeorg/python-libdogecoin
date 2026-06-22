@@ -51,7 +51,7 @@ GITHUB_BASE = "https://github.com/dogecoinfoundation/libdogecoin"
 # (uploads are immutable), so the fix ships as Python 0.1.3.2 while still
 # building against C-library 0.1.3 — there is no libdogecoin 0.1.3.2.
 # Override at the command line with --tag for local builds against another release.
-LIBDOGECOIN_TAG = "0.1.4"
+LIBDOGECOIN_TAG = "0.1.5-pre"
 
 GREEN = "\033[1;32m"
 RED   = "\033[31m"

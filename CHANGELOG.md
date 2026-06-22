@@ -4,6 +4,24 @@ All notable changes to `python-libdogecoin` are documented here. This project
 adheres to [Semantic Versioning](https://semver.org/) and the bound C surface
 tracks whichever libdogecoin release is fetched at build time.
 
+## [0.1.5-pre] - 2026-06-22
+
+This release builds against libdogecoin C-library **0.1.5-pre**.
+
+### Added
+- `w_dogecoin_verify_mnemonic`: verify a BIP39 mnemonic phrase against a
+  language wordlist. Wraps the new `dogecoin_verify_mnemonic` in v0.1.5.
+- Explicit-buffer (`_ex`) variants of six transaction functions:
+  `w_get_raw_transaction_ex`, `w_finalize_transaction_ex`,
+  `w_sign_raw_transaction_ex`, `w_sign_indexed_raw_transaction_ex`,
+  `w_sign_transaction_ex`, and `w_sign_transaction_w_privkey_ex`. These take
+  a caller-provided buffer (`TXHEXMAXLEN = 200001` bytes) instead of returning
+  a pointer into a static library-owned buffer, making them thread-safe. The
+  original non-`_ex` wrappers remain for compatibility.
+
+### Changed
+- Builds against libdogecoin C-library 0.1.5-pre (the pinned `LIBDOGECOIN_TAG`).
+
 ## [0.1.4] - 2026-06-22
 
 This release builds against libdogecoin C-library **0.1.4**.
@@ -142,6 +160,7 @@ intentionally decoupled — see `LIBDOGECOIN_TAG` in `fetch.py`.
 - Final Cython-based release. Address and stateful transaction wrappers over
   libdogecoin v0.1.0.
 
+[0.1.5-pre]: https://github.com/dogeorg/python-libdogecoin/compare/v0.1.4...v0.1.5-pre
 [0.1.4]: https://github.com/dogeorg/python-libdogecoin/compare/v0.1.3.2...v0.1.4
 [0.1.3.2]: https://github.com/dogeorg/python-libdogecoin/compare/v0.1.2...v0.1.3.2
 [0.1.2]: https://github.com/dogeorg/python-libdogecoin/compare/v0.1.1...v0.1.2

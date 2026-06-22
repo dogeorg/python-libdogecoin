@@ -17,6 +17,8 @@ _PRIVKEY_WIF_LEN = 53
 _MASTER_KEY_LEN = 128
 _P2PKH_LEN = 35
 _TX_HEX_MAX = 1024 * 100
+# v0.1.5 explicit-buffer tx functions use TXHEXMAXLEN (200001) from libdogecoin.h
+_TXHEXMAXLEN = 200001
 
 # BIP39 buffer sizes (from libdogecoin.h defines)
 _MNEMONIC_LEN = 1024   # MAX_MNEMONIC_SIZE
@@ -269,6 +271,21 @@ def w_dogecoin_seed_from_mnemonic(mnemonic, passphrase: str = "") -> bytes | Non
     if rc < 0:
         return None
     return bytes(ffi.buffer(seed, _SEED_LEN))
+
+
+def w_dogecoin_verify_mnemonic(mnemonic, language: str = "english",
+                               space: str = " ", filename=None) -> bool:
+    """Verify a BIP39 mnemonic phrase against a language wordlist.
+
+    mnemonic: the mnemonic phrase to verify
+    language: wordlist language (default "english")
+    space: word separator (default " ")
+    filename: path to a custom wordlist file, or None to use the built-in list
+    Returns: True if valid, False otherwise.
+    """
+    return bool(_require("dogecoin_verify_mnemonic")(
+        _b(mnemonic), _b(language), _b(space),
+        _b(filename) if filename is not None else ffi.NULL))
 
 
 def w_get_derived_hd_address_from_mnemonic(account: int, index: int,
@@ -622,6 +639,82 @@ def w_sign_transaction_w_privkey(tx_index: int, vout_index: int, privkey) -> int
     Returns: 1 on success, 0 on failure.
     """
     return int(_require("sign_transaction_w_privkey")(tx_index, vout_index, _b(privkey)))
+
+
+# === TRANSACTION — explicit-buffer variants (0.1.5+) =========================
+# These _ex functions take caller-provided buffers instead of returning a
+# pointer into a static library-owned buffer, making them thread-safe.
+
+def w_get_raw_transaction_ex(tx_index: int) -> str | None:
+    """Return the working transaction at tx_index as raw hex (explicit-buffer).
+
+    Returns: raw hex string, or None on failure.
+    """
+    buf = _buf(_TXHEXMAXLEN)
+    rc = _require("get_raw_transaction_ex")(tx_index, buf, _TXHEXMAXLEN)
+    return _s(buf) if rc else None
+
+
+def w_finalize_transaction_ex(tx_index: int, destination_address, subtracted_fee,
+                               out_dogeamount_for_verification,
+                               changeaddress) -> str | None:
+    """Finalize the working transaction (explicit-buffer); returns raw hex or None."""
+    buf = _buf(_TXHEXMAXLEN)
+    rc = _require("finalize_transaction_ex")(
+        tx_index, _b(destination_address), _b(str(subtracted_fee)),
+        _b(str(out_dogeamount_for_verification)), _b(changeaddress),
+        buf, _TXHEXMAXLEN)
+    return _s(buf) if rc else None
+
+
+def w_sign_raw_transaction_ex(input_index: int, incoming_raw_tx, script_hex,
+                               sig_hash_type: int, privkey) -> str | None:
+    """Sign a raw transaction (explicit-buffer); input and output buffers are separate.
+
+    Returns: signed transaction hex string, or None on failure.
+    """
+    signed_buf = _buf(_TXHEXMAXLEN)
+    signed_size = ffi.new("size_t[1]", [_TXHEXMAXLEN])
+    rc = _require("sign_raw_transaction_ex")(
+        input_index, _b(incoming_raw_tx), signed_buf, signed_size,
+        _b(script_hex), sig_hash_type, _b(privkey))
+    return _s(signed_buf) if rc else None
+
+
+def w_sign_indexed_raw_transaction_ex(tx_index: int, input_index: int,
+                                       script_hex, sig_hash_type: int,
+                                       privkey) -> str | None:
+    """Sign a specific input of a stored transaction (explicit-buffer).
+
+    Returns: signed transaction hex string, or None on failure.
+    """
+    buf = _buf(_TXHEXMAXLEN)
+    rc = _require("sign_indexed_raw_transaction_ex")(
+        tx_index, input_index, _b(script_hex), sig_hash_type, _b(privkey),
+        buf, _TXHEXMAXLEN)
+    return _s(buf) if rc else None
+
+
+def w_sign_transaction_ex(tx_index: int, script_pubkey, privkey) -> str | None:
+    """Sign all inputs of the working transaction (explicit-buffer).
+
+    Returns: signed transaction hex string, or None on failure.
+    """
+    buf = _buf(_TXHEXMAXLEN)
+    rc = _require("sign_transaction_ex")(
+        tx_index, _b(script_pubkey), _b(privkey), buf, _TXHEXMAXLEN)
+    return _s(buf) if rc else None
+
+
+def w_sign_transaction_w_privkey_ex(tx_index: int, privkey) -> str | None:
+    """Sign all inputs of the working transaction with a single key (explicit-buffer).
+
+    Returns: signed transaction hex string, or None on failure.
+    """
+    buf = _buf(_TXHEXMAXLEN)
+    rc = _require("sign_transaction_w_privkey_ex")(
+        tx_index, _b(privkey), buf, _TXHEXMAXLEN)
+    return _s(buf) if rc else None
 
 
 # === WALLET / SPV ============================================================
