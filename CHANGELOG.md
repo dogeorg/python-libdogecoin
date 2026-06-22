@@ -47,6 +47,17 @@ intentionally decoupled — see `LIBDOGECOIN_TAG` in `fetch.py`.
 ## [Unreleased]
 
 ### Added
+- Tier 3 object API (foundation): the HD (BIP32) node is now exposed as an
+  `HDNode` object with managed lifetime, alongside `MAINNET`/`TESTNET`/`REGTEST`
+  chain-parameter handles. Where the flat `w_*` functions take and return
+  strings, `HDNode` lets you derive children, read struct fields
+  (`depth`, `child_num`, `public_key`, ...), and serialize, e.g.
+  `HDNode.from_seed(seed).derive_private(0).serialize_private(MAINNET)`.
+  Lifetime is explicit-free-preferred with a GC finalizer backstop: handles
+  support `with`, free exactly once, and raise `UseAfterFreeError` on use after
+  free. This `_Handle` base is the foundation later struct types (key, pubkey,
+  transaction, SPV client) build on. Imported only when the linked libdogecoin
+  exposes the `dogecoin_hdnode_*` surface; the Tier 1 `w_*` API is unaffected.
 - Single stable-ABI (`abi3`) wheel per platform: one wheel now serves CPython
   3.10 through 3.13+, instead of an interpreter-specific wheel. Newer Python
   versions no longer fall back to a source build.

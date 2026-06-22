@@ -66,7 +66,15 @@ ffibuilder = FFI()
 ffibuilder.cdef(_ensure_cdef())
 ffibuilder.set_source(
     "libdogecoin._libdogecoin_cffi",
-    '#include "libdogecoin.h"',
+    '''#include "libdogecoin.h"
+
+/* Tier 3: expose the read-only chain parameter globals as opaque pointers.
+   cffi cannot bind an `extern const struct` global directly, so these thin
+   accessors hand back a void* the Python side passes through unchanged. */
+void* dogecoin_chainparams_main_ptr(void)    { return (void*)&dogecoin_chainparams_main; }
+void* dogecoin_chainparams_test_ptr(void)    { return (void*)&dogecoin_chainparams_test; }
+void* dogecoin_chainparams_regtest_ptr(void) { return (void*)&dogecoin_chainparams_regtest; }
+''',
     include_dirs=[str(ROOT / "include")],
     extra_objects=[str(LIBA)],
     libraries=_libraries(),

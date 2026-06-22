@@ -647,3 +647,15 @@ def available() -> list[str]:
     except Exception:
         # fall back to probing the lib object
         return [n for n in dir(lib) if not n.startswith("_")]
+
+
+# === TIER 3: object-oriented handle API ======================================
+# HD node / chain params are bound only when the linked libdogecoin exposes the
+# dogecoin_hdnode_* surface. Import is guarded so a build without it still loads
+# the Tier 1 w_* API cleanly; HDNode is simply absent.
+try:
+    from ._hdnode import HDNode, ChainParams, MAINNET, TESTNET, REGTEST  # noqa: F401
+    from ._handle import HandleError, UseAfterFreeError  # noqa: F401
+    _HAS_TIER3 = True
+except (ImportError, AttributeError):
+    _HAS_TIER3 = False

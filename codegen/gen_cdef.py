@@ -192,6 +192,14 @@ def main():
     idl = json.loads(IDL.read_text()) if IDL.exists() else {"functions": []}
     idl_names = {f["name"] for f in idl["functions"]}
 
+    # Tier 3 preamble: hand-curated struct layouts + handle APIs that the flat
+    # Tier 1 parser cannot emit (structs need concrete field layouts). Prepended
+    # so cffi sees dogecoin_hdnode / dogecoin_chainparams before any use.
+    preamble = ""
+    preamble_path = Path(__file__).resolve().parent / "tier3_preamble.h"
+    if preamble_path.exists():
+        preamble = preamble_path.read_text().rstrip() + "\n\n"
+
     lines = ["/* AUTO-GENERATED from the fetched libdogecoin header. */"]
     bound = []
     deferred = []
@@ -212,7 +220,7 @@ def main():
         lines.append(sig)
         bound.append({"name": name, "in_idl": name in idl_names})
 
-    Path(args.out_cdef).write_text("\n".join(lines) + "\n")
+    Path(args.out_cdef).write_text(preamble + "\n".join(lines) + "\n")
     Path(args.out_manifest).write_text(
         json.dumps(
             {"functions": bound, "count": len(bound), "deferred": sorted(deferred)},
