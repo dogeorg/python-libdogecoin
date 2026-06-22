@@ -60,6 +60,19 @@ class Key(_Handle):
         return k
 
     @classmethod
+    def from_bytes(cls, privkey: bytes) -> "Key":
+        """Construct a key from 32 raw private-key bytes.
+
+        Needed for importing an existing key and for deterministic test vectors.
+        The struct is a bare 32-byte field, so the bytes are written directly.
+        """
+        if len(privkey) != _PRIVKEY_LEN:
+            raise ValueError(f"privkey must be {_PRIVKEY_LEN} bytes, got {len(privkey)}")
+        k = cls._alloc()
+        ffi.memmove(k._ptr.privkey, privkey, _PRIVKEY_LEN)
+        return k
+
+    @classmethod
     def from_wif(cls, wif: str, chain: ChainParams) -> "Key":
         """Decode a WIF string into a private key (bridge from Tier 1)."""
         k = cls._alloc()
