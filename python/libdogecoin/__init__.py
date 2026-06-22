@@ -655,7 +655,6 @@ def available() -> list[str]:
 # the Tier 1 w_* API cleanly; HDNode is simply absent.
 try:
     from ._hdnode import HDNode, ChainParams, MAINNET, TESTNET, REGTEST  # noqa: F401
-    from ._key import Key, PubKey  # noqa: F401
     from ._handle import HandleError, UseAfterFreeError  # noqa: F401
     _HAS_TIER3 = True
 except (ImportError, AttributeError):

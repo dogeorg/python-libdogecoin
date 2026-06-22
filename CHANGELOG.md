@@ -46,43 +46,43 @@ intentionally decoupled — see `LIBDOGECOIN_TAG` in `fetch.py`.
 
 ## [0.1.4] - 2026-06-22
 
+This release builds against libdogecoin C-library **0.1.4**.
+
+The Tier 3 object API ships **HDNode only**. The EC key/signing object API
+(`Key`/`PubKey`) was deferred: those operations (`dogecoin_privkey_gen`,
+`dogecoin_pubkey_from_key`, `dogecoin_key_sign_hash`, ...) are not part of
+libdogecoin's public `libdogecoin.h` surface, and binding non-public internal
+functions risks silent breakage across libdogecoin releases. The same
+capabilities remain available through the public Tier 1 string API
+(`w_generate_priv_pub_key_pair`, `w_sign_message`, `w_verify_message`,
+`w_sign_transaction`, ...). `Key`/`PubKey` will return as an object wrapper once
+libdogecoin exposes the EC functions publicly.
+
 ### Added
-- Compiler-verified struct layouts: `dogecoin_hdnode`, `dogecoin_key`, and
-  `dogecoin_pubkey` are declared with cffi `...;` in the cdef preamble, so any
-  field layout drift from the libdogecoin headers is caught at build time rather
-  than silently corrupting memory at runtime. (Guards the same class of bug as the
-  `pubkey.compressed` ABI fix that shipped in 0.1.3.2.)
-- Tier 3 key objects (Layer B): `Key` (EC private key) and `PubKey` on the same
-  managed-handle base, plus sign/verify. `Key.generate()`, `Key.from_wif()` /
-  `to_wif()` (bridging the Tier 1 string world), `pubkey()`, `sign(hash32)`,
-  and `PubKey.verify(hash32, sig)` / `hex()` / `hash160()`. **Security:** a
-  private key cleanses (zeroes) its secret bytes on explicit `free()`, on
-  context-manager exit, and as a GC backstop — prefer `with Key.generate() as k:`
-  so secrets do not linger in memory.
-- Tier 3 object API (foundation): the HD (BIP32) node is now exposed as an
-  `HDNode` object with managed lifetime, alongside `MAINNET`/`TESTNET`/`REGTEST`
-  chain-parameter handles. Where the flat `w_*` functions take and return
-  strings, `HDNode` lets you derive children, read struct fields
+- Compiler-verified struct layout for `dogecoin_hdnode`: declared with cffi
+  `...;` in the cdef preamble, so any field-layout drift from the libdogecoin
+  headers is caught at build time rather than silently corrupting memory at
+  runtime.
+- Tier 3 object API (HDNode): the HD (BIP32) node is exposed as an `HDNode`
+  object with managed lifetime, alongside `MAINNET`/`TESTNET`/`REGTEST`
+  chain-parameter handles. Derive children, read struct fields
   (`depth`, `child_num`, `public_key`, ...), and serialize, e.g.
   `HDNode.from_seed(seed).derive_private(0).serialize_private(MAINNET)`.
   Lifetime is explicit-free-preferred with a GC finalizer backstop: handles
   support `with`, free exactly once, and raise `UseAfterFreeError` on use after
-  free. This `_Handle` base is the foundation later struct types (key, pubkey,
-  transaction, SPV client) build on. Imported only when the linked libdogecoin
-  exposes the `dogecoin_hdnode_*` surface; the Tier 1 `w_*` API is unaffected.
+  free. Imported only when the linked libdogecoin exposes the
+  `dogecoin_hdnode_*` surface; the Tier 1 `w_*` API is unaffected.
 - Single stable-ABI (`abi3`) wheel per platform: one wheel now serves CPython
   3.10 through 3.13+, instead of an interpreter-specific wheel. Newer Python
   versions no longer fall back to a source build.
 - `python_requires = ">=3.10"`, so older interpreters get a clear
   "no compatible version" message rather than a failing build.
 - PEP 561 typing support: `py.typed` marker and `__init__.pyi` stubs for the
-  full `w_*` and Tier 3 object API (`HDNode`, `Key`, `PubKey`, `ChainParams`,
-  `HandleError`, `UseAfterFreeError`, `MAINNET`/`TESTNET`/`REGTEST`), enabling
-  autocomplete and type checks in downstream code.
+  full `w_*` API and the `HDNode`/`ChainParams` object API, enabling autocomplete
+  and type checks in downstream code.
 - BIP39 known-answer tests (`tests/bip39_test.py`) asserting the canonical
-  Trezor reference seed vector byte-for-byte, plus message sign/verify
-  round-trips. These guard the key-derivation path, where a wrong seed silently
-  derives wrong addresses. Tests skip cleanly on builds that lack the functions.
+  Trezor reference seed vector byte-for-byte. Tests skip cleanly on builds that
+  lack the functions.
 
 ### Changed
 - PyPI uploads now use Trusted Publishing (OIDC) instead of a stored API token,
