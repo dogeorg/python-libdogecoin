@@ -74,6 +74,9 @@ SKIP_FUNCTIONS = {
     "getDerivedHDAddressFromEncryptedHDNode",
     # memory management helpers — not part of the public Python API
     "dogecoin_char_vla", "dogecoin_free",
+    # low-level crypto primitives — internal, not Python API; sha256_raw uses
+    # SHA256_DIGEST_LENGTH (an unresolvable macro) as an unnamed array size
+    "sha256_raw", "hmac_sha1",
 }
 
 # --- Curation gate ----------------------------------------------------------

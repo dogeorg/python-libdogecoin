@@ -76,14 +76,14 @@ def get(url: str) -> requests.Response:
 # Binary release path
 # ---------------------------------------------------------------------------
 
-def fetch_binary(tag: str, host: str):
+def fetch_binary(tag: str, host: str, checksums_name: str = "checksums.txt"):
     ext = ".zip" if "mingw32" in host else ".tar.gz"
     filename = f"libdogecoin-{tag}-{host}{ext}"
     base_url = f"{GITHUB_BASE}/releases/download/v{tag}/"
 
-    # download and parse SHA256SUMS.asc
-    checksums_text = get(base_url + "SHA256SUMS.asc").text
-    ok("Downloaded SHA256SUMS.asc")
+    # download and parse checksum file (checksums.txt since v0.1.4; SHA256SUMS.asc before)
+    checksums_text = get(base_url + checksums_name).text
+    ok(f"Downloaded {checksums_name}")
 
     # download archive
     archive_bytes = get(base_url + filename).content
@@ -273,21 +273,28 @@ def main():
 
     print(f"Fetching libdogecoin v{tag} for {host}")
 
-    # probe whether this tag has binary release assets
-    checksums_url = f"{GITHUB_BASE}/releases/download/v{tag}/SHA256SUMS.asc"
-    probe = requests.head(checksums_url, allow_redirects=True)
+    def _probe(name: str):
+        url = f"{GITHUB_BASE}/releases/download/v{tag}/{name}"
+        return requests.head(url, allow_redirects=True).status_code, name
 
     if args.source:
         print("Source build forced — skipping pre-built archive.")
         build_from_source(tag, host, args.sha256)
-    elif probe.status_code == 200:
-        print("Binary release detected — fetching pre-built archive.")
-        fetch_binary(tag, host)
-    elif probe.status_code == 404:
-        print("No binary release assets found — building from source.")
-        build_from_source(tag, host, args.sha256)
     else:
-        err(f"Unexpected HTTP {probe.status_code} probing {checksums_url}")
+        # v0.1.4+ uses checksums.txt; earlier releases used SHA256SUMS.asc
+        for cname in ("checksums.txt", "SHA256SUMS.asc"):
+            status, cname = _probe(cname)
+            if status == 200:
+                print("Binary release detected — fetching pre-built archive.")
+                fetch_binary(tag, host, checksums_name=cname)
+                break
+            elif status == 404:
+                continue
+            else:
+                err(f"Unexpected HTTP {status} probing {cname}")
+        else:
+            print("No binary release assets found — building from source.")
+            build_from_source(tag, host, args.sha256)
 
     cleanup(tag, host)
     ok(f"libdogecoin v{tag} ready in lib/ and include/")
