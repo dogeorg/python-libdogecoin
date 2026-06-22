@@ -18,6 +18,13 @@ This release builds against libdogecoin C-library **0.1.5-pre**.
   a caller-provided buffer (`TXHEXMAXLEN = 200001` bytes) instead of returning
   a pointer into a static library-owned buffer, making them thread-safe. The
   original non-`_ex` wrappers remain for compatibility.
+- Test coverage for the new surface (`tests/transaction_ex_test.py`): each
+  `_ex` transaction variant is asserted to produce byte-identical output to its
+  established non-`_ex` counterpart on the same known-answer vectors — so a
+  buffer-capacity, size-pointer, or argument-order error would be caught — plus
+  edge cases (bad index, wrong key, full-length non-truncation) and BIP39
+  verify round-trips (valid mnemonic passes; tampered, wrong-length, and garbage
+  phrases fail). Tests skip cleanly on libdogecoin builds without the surface.
 
 ### Changed
 - Builds against libdogecoin C-library 0.1.5-pre (the pinned `LIBDOGECOIN_TAG`).
