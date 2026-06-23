@@ -4,7 +4,7 @@ All notable changes to `python-libdogecoin` are documented here. This project
 adheres to [Semantic Versioning](https://semver.org/) and the bound C surface
 tracks whichever libdogecoin release is fetched at build time.
 
-## [0.1.5-pre] - 2026-06-22
+## [0.1.5rc1] - 2026-06-22
 
 This release builds against libdogecoin C-library **0.1.5-pre**.
 
@@ -27,7 +27,7 @@ This release builds against libdogecoin C-library **0.1.5-pre**.
   phrases fail). Tests skip cleanly on libdogecoin builds without the surface.
 
 ### Changed
-- Builds against libdogecoin C-library 0.1.5-pre (the pinned `LIBDOGECOIN_TAG`).
+- Builds against libdogecoin C-library 0.1.5-pre (the pinned `LIBDOGECOIN_TAG`). Python package version follows PEP 440: `0.1.5rc1`.
 
 ## [0.1.4] - 2026-06-22
 
@@ -167,7 +167,7 @@ intentionally decoupled — see `LIBDOGECOIN_TAG` in `fetch.py`.
 - Final Cython-based release. Address and stateful transaction wrappers over
   libdogecoin v0.1.0.
 
-[0.1.5-pre]: https://github.com/dogeorg/python-libdogecoin/compare/v0.1.4...v0.1.5-pre
+[0.1.5rc1]: https://github.com/dogeorg/python-libdogecoin/compare/v0.1.4...v0.1.5rc1
 [0.1.4]: https://github.com/dogeorg/python-libdogecoin/compare/v0.1.3.2...v0.1.4
 [0.1.3.2]: https://github.com/dogeorg/python-libdogecoin/compare/v0.1.2...v0.1.3.2
 [0.1.2]: https://github.com/dogeorg/python-libdogecoin/compare/v0.1.1...v0.1.2
