@@ -369,6 +369,10 @@ Convert a p2pkh address to its pubkey hash (scripthash) hex string.
 ### w_get_addr_from_pubkey_hash(pubkey_hash, is_testnet=False)
 Convert a pubkey hash hex string back to a p2pkh address.
 
+Accepts either a bare **hash160** (40 hex chars) or a full **P2PKH scriptPubKey**
+(50 hex chars). Bare hash160 is wrapped as `76a914…88ac` so it round-trips with
+`w_dogecoin_address_to_pubkey_hash`.
+
 **Returns:** p2pkh address string, or `None` on failure
 
 ---
