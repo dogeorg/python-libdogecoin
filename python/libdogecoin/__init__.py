@@ -420,9 +420,13 @@ def w_gen_privkey(is_testnet: bool = False):
 
 
 def w_dogecoin_address_to_pubkey_hash(p2pkh) -> str | None:
-    """Convert a p2pkh address to its pubkey hash hex string (lib-allocated).
+    """Convert a p2pkh address to its bare hash160 (20-byte) hex string.
 
-    Returns: pubkey hash hex string, or None on failure.
+    Note: this is **not** the full P2PKH scriptPubKey. For the scriptPubKey form
+    expected by ``w_get_addr_from_pubkey_hash`` / C ``getAddrFromPubkeyHash``,
+    use ``w_dogecoin_p2pkh_address_to_pubkey_hash`` instead (see #1).
+
+    Returns: 40-char hash160 hex string, or None on failure.
     """
     res = _require("dogecoin_address_to_pubkey_hash")(_b(p2pkh))
     if res == ffi.NULL:
@@ -431,9 +435,9 @@ def w_dogecoin_address_to_pubkey_hash(p2pkh) -> str | None:
 
 
 def w_dogecoin_private_key_wif_to_pubkey_hash(privkey_wif) -> str | None:
-    """Derive the pubkey hash hex string from a WIF private key (lib-allocated).
+    """Derive the P2PKH scriptPubKey hex from a WIF private key (lib-allocated).
 
-    Returns: pubkey hash hex string, or None on failure.
+    Returns: typically 50-char scriptPubKey hex (76a914…88ac), or None on failure.
     """
     res = _require("dogecoin_private_key_wif_to_pubkey_hash")(_b(privkey_wif))
     if res == ffi.NULL:
@@ -442,22 +446,43 @@ def w_dogecoin_private_key_wif_to_pubkey_hash(privkey_wif) -> str | None:
 
 
 def w_dogecoin_p2pkh_address_to_pubkey_hash(p2pkh):
-    """Convert a p2pkh address to its pubkey hash (scripthash) hex string.
+    """Convert a p2pkh address to its P2PKH scriptPubKey hex string.
 
-    Returns: pubkey hash hex string, or None on failure.
+    Returns: scriptPubKey hex (76a914<hash160>88ac), or None on failure.
     """
     out = _buf(_PUBKEY_HASH_LEN)
     rc = _require("dogecoin_p2pkh_address_to_pubkey_hash")(_b(p2pkh), out)
     return _s(out) if rc else None
 
 
+def _normalize_pubkey_hash_for_get_addr(pubkey_hash: str) -> str:
+    """Normalize hex to the scriptPubKey form expected by getAddrFromPubkeyHash.
+
+    Accepts:
+    - 40-char hash160 (from ``w_dogecoin_address_to_pubkey_hash``)
+    - 50-char P2PKH scriptPubKey (76a914…88ac)
+    """
+    h = pubkey_hash.strip().lower()
+    if h.startswith("0x"):
+        h = h[2:]
+    # strip non-hex just in case of whitespace
+    if len(h) == 40 and all(c in "0123456789abcdef" for c in h):
+        return "76a914" + h + "88ac"
+    return h
+
+
 def w_get_addr_from_pubkey_hash(pubkey_hash, is_testnet: bool = False):
     """Convert a pubkey hash hex string to a p2pkh address.
 
+    Accepts either a bare 20-byte hash160 (40 hex chars) or a full P2PKH
+    scriptPubKey (50 hex chars starting with 76a914). Bare hash160 is wrapped
+    automatically so it round-trips with ``w_dogecoin_address_to_pubkey_hash`` (#1).
+
     Returns: p2pkh address string, or None on failure.
     """
+    normalized = _normalize_pubkey_hash_for_get_addr(str(pubkey_hash))
     out = _buf(_P2PKH_LEN + 4)
-    rc = _require("getAddrFromPubkeyHash")(_b(pubkey_hash), int(is_testnet), out)
+    rc = _require("getAddrFromPubkeyHash")(_b(normalized), int(is_testnet), out)
     return _s(out) if rc else None
 
 

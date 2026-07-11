@@ -71,6 +71,15 @@ class TestAddressUtils013(unittest.TestCase):
         recovered = l.w_get_addr_from_pubkey_hash(h)
         self.assertEqual(recovered, addr)
 
+    def test_address_to_hash160_roundtrip_with_get_addr(self):
+        """#1 — bare hash160 from address_to_pubkey_hash must round-trip."""
+        _, addr = l.w_generate_priv_pub_key_pair()
+        hash160 = l.w_dogecoin_address_to_pubkey_hash(addr)
+        self.assertIsNotNone(hash160)
+        self.assertEqual(len(hash160), 40)
+        recovered = l.w_get_addr_from_pubkey_hash(hash160)
+        self.assertEqual(recovered, addr)
+
     # --- WIF encode/decode ---
 
     def test_wif_encode_decode_roundtrip(self):
